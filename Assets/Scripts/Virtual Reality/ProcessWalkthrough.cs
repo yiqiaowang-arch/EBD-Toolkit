@@ -34,8 +34,8 @@ public class ProcessWalkthrough : MonoBehaviour
     public float h = 1.0f;
 
     public bool useAllFilesInDirectory = false;
-    public string rawDataDirectory = "RawData/Default";
-    public string rawDataFileName = "RawData/Default/default.csv";
+    public string rawDataDirectory = "VR_Data/Default";
+    public string rawDataFileName = "VR_Data/Default/default.csv";
     public string outProcessedDataFileName;
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;

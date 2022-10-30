@@ -19,6 +19,7 @@ public class MouseTracker : MonoBehaviour
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     // Update is called once per frame
@@ -26,8 +27,8 @@ public class MouseTracker : MonoBehaviour
     {
 
         // Get the current position of mouse and scale it appropriately.
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
         // Change the tilt of the head according to the vertical mouse axis.
         xRotation -= mouseY;

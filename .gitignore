@@ -77,7 +77,7 @@ Data_ABM/
 Recordings/
 
 # Geometry
-*.fbx
+# *.fbx
 
 # VS Code
 .vscode

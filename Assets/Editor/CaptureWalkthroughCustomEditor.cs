@@ -93,12 +93,5 @@ public class CaptureWalkthroughCustomEditor : Editor
             0.5f, 
             2.0f
         );
-
-        // Stop gamemode if user is close enough to target.
-        if (Vector3.Distance(capture.gameObject.transform.position, capture.target.position) < capture.targetProximity)
-        {
-            capture.WriteRawDataFile();
-            EditorApplication.isPlaying = false;
-        }
     }
 }

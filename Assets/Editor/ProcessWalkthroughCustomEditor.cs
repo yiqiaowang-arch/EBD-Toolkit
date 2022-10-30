@@ -64,8 +64,10 @@ public class ProcessWalkthroughCustomEditor : Editor
                     }
                     processor.rawDataFileName = newRawDataFileName;
                 }
-                processor.outProcessedDataFileName = "ProcessedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
-                processor.outSummarizedDataFileName = "SummarizedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
+                Directory.CreateDirectory("Data_VR_Processed");
+                Directory.CreateDirectory("Data_VR_Summarized");
+                processor.outProcessedDataFileName = "Data_VR_Processed/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
+                processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
             }
         }
 
@@ -90,8 +92,10 @@ public class ProcessWalkthroughCustomEditor : Editor
                 }
                 processor.rawDataFileName = newRawDataFileName;
             }
-            processor.outProcessedDataFileName = "ProcessedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
-            processor.outSummarizedDataFileName = "SummarizedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
+            Directory.CreateDirectory("Data_VR_Processed");
+            Directory.CreateDirectory("Data_VR_Summarized");
+            processor.outProcessedDataFileName = "Data_VR_Processed/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
+            processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
         }
 
         GUILayout.EndHorizontal();
@@ -109,8 +113,10 @@ public class ProcessWalkthroughCustomEditor : Editor
                     newRawDatafileName = processor.rawDataFileName;
                 }
                 processor.rawDataFileName = newRawDatafileName;
-                processor.outProcessedDataFileName = "ProcessedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
-                processor.outSummarizedDataFileName = "SummarizedData/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
+                Directory.CreateDirectory("Data_VR_Processed");
+                Directory.CreateDirectory("Data_VR_Summarized");
+                processor.outProcessedDataFileName = "Data_VR_Processed/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
+                processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
             }
             GUILayout.Label(Path.GetFileName(processor.rawDataFileName));
             GUILayout.EndHorizontal();
@@ -163,7 +169,7 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
                 processor.raysPerRaycast = EditorGUILayout.IntSlider("Rays per Raycast", processor.raysPerRaycast, 1, 200);
                 processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
-                processor.h = EditorGUILayout.Slider("Blur", processor.h, 0.1f, 10.0f);
+                processor.h = EditorGUILayout.Slider("Smoothness", processor.h, 0.1f, 10.0f);
 
                 EditorGUI.BeginChangeCheck();
                 SerializedObject serializedHeatmapGradient = new SerializedObject(target);

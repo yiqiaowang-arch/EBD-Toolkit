@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using System.Linq;
-using System.IO;
+using UnityEditor;
 
 public class CaptureWalkthrough : MonoBehaviour
 {
@@ -84,6 +84,11 @@ public class CaptureWalkthrough : MonoBehaviour
             yAngle.Add(view.transform.rotation.eulerAngles.y);
             xAngle.Add(view.transform.rotation.eulerAngles.x);
             time.Add(currTime);
+        }
+        if (Vector3.Distance(gameObject.transform.position, target.transform.position) < targetProximity)
+        {
+            WriteRawDataFile();
+            EditorApplication.ExitPlaymode();
         }
     }
 
