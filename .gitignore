@@ -72,8 +72,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
 # Generated data
-Data/
-Data_ABM/
 Recordings/
 
 # Geometry
