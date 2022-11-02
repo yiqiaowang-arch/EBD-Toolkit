@@ -100,7 +100,7 @@ public class ProcessWalkthrough : MonoBehaviour
             // Read in all files in the directory.
             rawDataFileNames = new List<string>(Directory.GetFiles(rawDataDirectory, "*.csv"));
         }
-        else 
+        else
         {
             // Only get single file.
             rawDataFileNames.Add(rawDataFileName);
@@ -121,7 +121,7 @@ public class ProcessWalkthrough : MonoBehaviour
             trajectoryForwardDirections.Add(parsedData.Item3);
             trajectoryUpDirections.Add(parsedData.Item4);
             trajectoryRightDirections.Add(parsedData.Item5);
-        }        
+        }
 
         if (visualizeHeatmap)
         {
@@ -184,8 +184,8 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         str = str.Substring(1, str.Length - 2);
         string[] substrs = str.Split(csvSep);
-        return new Vector3( float.Parse(substrs[0]), 
-                            float.Parse(substrs[1]), 
+        return new Vector3( float.Parse(substrs[0]),
+                            float.Parse(substrs[1]),
                             float.Parse(substrs[2]));
     }
 
@@ -226,7 +226,7 @@ public class ProcessWalkthrough : MonoBehaviour
             return false;
         }
 
-        
+
         // The MeshCollider the ray hit. NULL-check.
         MeshCollider meshCollider = hit.collider as MeshCollider;
         if (meshCollider == null || meshCollider.sharedMesh == null)
@@ -257,7 +257,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
         // This is the path the file will be written to.
         string path = dirName + Path.DirectorySeparatorChar + fileName + "." + format;
-        
+
         // Check if specified file exists yet and if user wants to overwrite.
         if (File.Exists(path))
         {
@@ -266,7 +266,7 @@ public class ProcessWalkthrough : MonoBehaviour
              * foldername + sep + filename + . + format -> foldername + sep + filename + _x + . format
              * x will be increased in case of multiple overwrites.
              */
-            
+
             // Check if there was a previous overwrite and get highest identifier.
             int id = 0;
             while (File.Exists(dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format))
@@ -280,7 +280,7 @@ public class ProcessWalkthrough : MonoBehaviour
         return path;
     }
 
-    void CreateParticles() 
+    void CreateParticles()
     {
         ParticleSystem.Particle[] particles = new ParticleSystem.Particle[particlePositions.Length];
         for (int i = 0; i < particles.Length; i++)
@@ -311,7 +311,7 @@ public class ProcessWalkthrough : MonoBehaviour
             string[] splitRawDataDirectory = rawDataDirectory.Split('/');
             return "all_files_in_" + splitRawDataDirectory[splitRawDataDirectory.Length - 1] + "_" + type + ".csv";
         }
-        string[] splitRawDir = rawDataDirectory.Split('/'); 
+        string[] splitRawDir = rawDataDirectory.Split('/');
         return splitRawDir[splitRawDir.Length - 1] + "_" + Path.GetFileNameWithoutExtension(rawDataFileName) + "_" + type + Path.GetExtension(rawDataFileName);
     }
 
@@ -328,12 +328,18 @@ public class ProcessWalkthrough : MonoBehaviour
         for (int i = 0; i < data.Length; i++)
         {
             // Split string at comma.
-            string[] splitLine = data[i].Split(csvSep);
-            times[i] = float.Parse(splitLine[0]);
-            positions[i] = new Vector3(float.Parse(splitLine[1]), float.Parse(splitLine[2]), float.Parse(splitLine[3]));
-            forwardDirections[i] = new Vector3(float.Parse(splitLine[4]), float.Parse(splitLine[5]), float.Parse(splitLine[6]));
-            upDirections[i] = new Vector3(float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]));
-            rightDirections[i] = new Vector3(float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]));
+            try {
+              string[] splitLine = data[i].Split(csvSep);
+              times[i] = float.Parse(splitLine[0]);
+              positions[i] = new Vector3(float.Parse(splitLine[1]), float.Parse(splitLine[2]), float.Parse(splitLine[3]));
+              forwardDirections[i] = new Vector3(float.Parse(splitLine[4]), float.Parse(splitLine[5]), float.Parse(splitLine[6]));
+              upDirections[i] = new Vector3(float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]));
+              rightDirections[i] = new Vector3(float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]));
+            }
+            catch {
+              continue;
+            }
+
         }
         return (times, positions, forwardDirections, upDirections, rightDirections);
     }
@@ -370,7 +376,7 @@ public class ProcessWalkthrough : MonoBehaviour
         }
 
         int n = hits.Count;
-        
+
         // Calculate the distances between each hit.
         List<float> distances = new List<float>();
         for (int i = 0; i < n; i++)
@@ -466,7 +472,7 @@ public class ProcessWalkthrough : MonoBehaviour
         // Distances of user trajectory.
         for (int i = 0; i < numFiles; i++)
         {
-            // Add up distances between measures time-points. Note that the resolution at which the time-points are 
+            // Add up distances between measures time-points. Note that the resolution at which the time-points are
             // recorded will make a difference.
             float currDistance = 0.0f;
             for (int j = 0; j < trajectoryPositions[i].Length - 1; j++)
@@ -506,7 +512,7 @@ public class ProcessWalkthrough : MonoBehaviour
             NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
 
             float currDistance = 0.0f;
-            for (int j = 0; j < navMeshPath.corners.Length - 1; j++) 
+            for (int j = 0; j < navMeshPath.corners.Length - 1; j++)
             {
                 currDistance += Vector3.Distance(navMeshPath.corners[j], navMeshPath.corners[j + 1]);
             }
@@ -528,7 +534,7 @@ public class ProcessWalkthrough : MonoBehaviour
             ratioShortestPaths.Add(distances[i] / shortestPathDistances[i]);
         }
 
-        
+
 
         // Whether the run was successful.
         for (int i = 0; i < numFiles; i++)
@@ -591,7 +597,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 isHead = false;  // Set head to false, such that head will not be generated in the following iterations.
                 summaryDataFile.WriteLine(header);
             }
-            
+
             // Write data for each file.
             for (int i = 0; i < numFiles; i++)
             {

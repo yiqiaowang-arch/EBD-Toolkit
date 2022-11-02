@@ -1,0 +1,12 @@
+AgentType;TaskName;Distance;Collisions;Collisions_Medicine distribution;Collisions_Undergoing triage;Collisions_monitoring patients;Collisions_Patient round;Collisions_Supporting family member;Collisions_Writing report;Collisions_Monitoring patients;Collisions_Wheeling patient on a stretcher;Collisions_Bringing wheelchair;Collisions_Cleaner;Collisions_Admitting patient in waiting area;Duration;pos0x;pos0y;pos0z
+Nurse;Medicine distribution;0;0;0;0;0;0;0;0;0;0;0;0;0;0.340414;-26.73952;1.016656;-26.878
+Patient;Undergoing triage;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3401699;-41.93;1.016656;-85.652
+Physician;monitoring patients;0;1;0;0;0;0;0;0;1;0;0;0;0;0.339946;-27.32;1.016656;-71.22
+Resident physician;Patient round;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3397362;-25.92282;1.016656;-70.5321
+Visitor;Supporting family member;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3395329;-8.066668;1.016656;-3.5
+Shift nurse;Writing report;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3393312;-26.28;1.016656;-25.39
+Head of the ED;Monitoring patients;0;1;0;0;1;0;0;0;0;0;0;0;0;0.3391306;-27.32;1.016656;-71.22
+Paramedic;Wheeling patient on a stretcher;0;1;0;0;0;0;0;0;0;0;1;0;0;0.3389313;-9.934338;1.016656;-19.62407
+Porter;Bringing wheelchair;0;1;0;0;0;0;0;0;0;1;0;0;0;0.3387308;-10.75354;1.016656;-19.60785
+Cleaning patient areas;Cleaner;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3385308;-11.44752;1.016656;-66.6882
+Triage nurse;Admitting patient in waiting area;0;0;0;0;0;0;0;0;0;0;0;0;0;0.3383307;-9.9;1.016656;-79.49
