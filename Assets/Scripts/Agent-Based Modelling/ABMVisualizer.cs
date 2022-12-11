@@ -13,9 +13,9 @@ public class ABMVisualizer : MonoBehaviour
     public List<string> taskFilter;
     public int agentFlags;
     public int taskFlags;
-    public string file;
+    public string fileName;
     public bool compare = false;
-    public string fileComp;
+    public string fileNameCompare;
     public List<string> agentTypeFilterComp;
     public List<string> taskFilterComp;
     public int agentFlagsComp;
@@ -29,19 +29,11 @@ public class ABMVisualizer : MonoBehaviour
     public float height;
     public float threshold = 1.0f;
     public string delim = ";";
+    private float[,,,] _distances; // [x_dim, y_dim, z_dim, n_points]
 
     // Start is called before the first frame update
     void Start()
     {
-        if (threshold <= 0.0)
-        {
-            throw new Exception("Threshold needs to be strictly larger than 0");
-        }
-        if (smoothness <= 0.0)
-        {
-            throw new Exception("Smoothness needs to be strictly larger than 0");
-        }
-
         // Removing leading and trailing whitespaces.
         for (int i = 0; i < agentTypeFilter.Count; i++) {
             agentTypeFilter[i] = agentTypeFilter[i].Trim();
@@ -62,7 +54,7 @@ public class ABMVisualizer : MonoBehaviour
             taskFilterComp[i] = taskFilterComp[i].Trim();
         }
 
-        List<Vector3> positions = ReadData(file, agentTypeFilter, taskFilter);
+        List<Vector3> positions = ReadData(fileName, agentTypeFilter, taskFilter);
 
         Vector3 minCorner = Vector3.zero;
         Vector3 maxCorner = Vector3.zero;
@@ -89,7 +81,7 @@ public class ABMVisualizer : MonoBehaviour
         if (compare)
         {
             // Reading in comparison data.
-            List<Vector3> positionsComp = ReadData(fileComp, agentTypeFilterComp, taskFilterComp);
+            List<Vector3> positionsComp = ReadData(fileNameCompare, agentTypeFilterComp, taskFilterComp);
 
             // Computing (unnormalized) density values of comparison data.
             float[,] densitiesComp = ComputeDensityMap(positionsComp, grid);
@@ -198,7 +190,7 @@ public class ABMVisualizer : MonoBehaviour
         List<string> taskFilter
     )
     {
-        string[] lines = File.ReadAllLines(file);
+        string[] lines = File.ReadAllLines(fileName);
 
         // Determine first column that contains position-data.
         int posStartIdx = 0;

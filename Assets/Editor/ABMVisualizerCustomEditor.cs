@@ -14,9 +14,12 @@ public class ABMVisualizerCustomEditor : Editor
     {
         compareAnimBool = new UnityEditor.AnimatedValues.AnimBool();
         visualizer = (ABMVisualizer) target;
-        string initialFile = Directory.GetFiles("Data_ABM")[0];
-        visualizer.file = visualizer.file == "" ? initialFile : visualizer.file;
-        visualizer.fileComp = visualizer.fileComp == "" ? initialFile : visualizer.fileComp;
+
+        // If the file to read from is either unitialized or the path does not
+        // exist anymore, just set the first file in the Data_ABM directory.
+        // Else, use the existing file.
+        visualizer.fileName = GetValidInitialFileName(visualizer.fileName);
+        visualizer.fileNameCompare = GetValidInitialFileName(visualizer.fileNameCompare);
     }
 
     public override void OnInspectorGUI()
@@ -76,9 +79,9 @@ public class ABMVisualizerCustomEditor : Editor
     }
 
 
-    Dictionary<string, HashSet<string>> GetAgentTypesToTasks(string filename, string delim = ";")
+    Dictionary<string, HashSet<string>> GetAgentTypesToTasks(string fileName, string delim = ";")
     {
-        string[] lines = File.ReadAllLines(filename);
+        string[] lines = File.ReadAllLines(fileName);
         Dictionary<string, HashSet<string>> dict = new Dictionary<string, HashSet<string>>();
         foreach (string line in lines.Skip(1))
         {
@@ -114,26 +117,25 @@ public class ABMVisualizerCustomEditor : Editor
             {
                 if (isCompare)
                 {
-                    visualizer.fileComp = fileName;
+                    visualizer.fileNameCompare = fileName;
                 }
                 else
                 {
-                    visualizer.file = fileName;
+                    visualizer.fileName = fileName;
                 }
             }            
         }
 
         if (isCompare)
         {
-            GUILayout.TextField(visualizer.fileComp);
+            GUILayout.TextField(visualizer.fileNameCompare);
         }
         else
         {
-            GUILayout.TextField(visualizer.file);
+            GUILayout.TextField(visualizer.fileName);
         }
-
         Dictionary<string, HashSet<string>> agentTypeToTask = GetAgentTypesToTasks(
-            isCompare ? visualizer.fileComp : visualizer.file,
+            isCompare ? visualizer.fileNameCompare : visualizer.fileName,
             delim: visualizer.delim
         );
         string[] agentOptions = agentTypeToTask.Keys.ToArray();
@@ -178,6 +180,23 @@ public class ABMVisualizerCustomEditor : Editor
         if (EditorGUI.EndChangeCheck())
         {
             serializedHeatmapGradient.ApplyModifiedProperties();
+        }
+    }
+
+    private string GetValidInitialFileName(string currentFileName)
+    {
+        if (File.Exists(currentFileName))
+        {
+            return currentFileName;
+        }
+        string[] generatedFileNames = Directory.GetFiles("Data_ABM");
+        if (generatedFileNames.Length == 0)
+        {
+            throw new System.Exception("You are attempting to visualize ABM data, but no ABM data has been generated. Please run an ABM simulation first.");
+        }
+        else
+        {
+            return generatedFileNames[0];
         }
     }
 }
