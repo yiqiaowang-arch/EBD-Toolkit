@@ -24,7 +24,7 @@ public class ABMVisualizer : MonoBehaviour
     public GameObject corner2;
     public float smoothness = 1.0f;
     public Gradient gradient;
-    public Gradient gradientComp;
+    public Gradient gradientCompare;
     public float resolution;
     public float height;
     public float threshold = 1.0f;
@@ -75,7 +75,10 @@ public class ABMVisualizer : MonoBehaviour
             }
         }
 
+        float startComputation = Time.realtimeSinceStartup;
         float[,] densities = ComputeDensityMap(positions, grid);
+        float endComputation = Time.realtimeSinceStartup;
+        Debug.Log("Density Computation: " + (endComputation - startComputation));
 
         float[,] gradientVals = new float[xDim, zDim];
         if (compare)
@@ -128,12 +131,15 @@ public class ABMVisualizer : MonoBehaviour
         float[] gradientValsFlat = EBDMath.Flatten(gradientVals).ToArray();
 
         (float min, float max) = EBDMath.MinMax(gradientVals);
-        createParticles(
+        float startRender = Time.realtimeSinceStartup;
+        CreateParticles(
             gridFlat,
             gradientValsFlat,
             resolution,
-            compare ? gradientComp : gradient
+            compare ? gradientCompare : gradient
         );
+        float endRender = Time.realtimeSinceStartup;
+        Debug.Log("Time rendering: " + (endRender - startRender));
     }
 
     private List<Vector3> CreateTrajectory(string[] str, int startIdx)
@@ -171,15 +177,14 @@ public class ABMVisualizer : MonoBehaviour
         return res;
     }
 
-    void createParticles(Vector3[] positions, float[] colors, float size, Gradient gradient) {
+    void CreateParticles(Vector3[] positions, float[] colors, float size, Gradient gradient) {
         ParticleSystem.Particle[] particles = new ParticleSystem.Particle[positions.Length];
-        for (int i = 0; i < particles.Length; i++)
-        {
+        Parallel.For(0, particles.Length, i => {
             particles[i].position = positions[i];
             particles[i].velocity = Vector3.zero;
             particles[i].size = size;
             particles[i].color = gradient.Evaluate(colors[i]);
-        }
+        });
         ParticleSystem partSys = GetComponent<ParticleSystem>();
         partSys.SetParticles(particles, particles.Length);
     }
@@ -252,5 +257,8 @@ public class ABMVisualizer : MonoBehaviour
         });
 
         return densities;
-    }   
+    }
+
+    void Update() {
+    }
 }
