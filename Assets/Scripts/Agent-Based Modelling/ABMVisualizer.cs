@@ -58,46 +58,47 @@ public class ABMVisualizer : MonoBehaviour
 
         Vector3 minCorner = Vector3.zero;
         Vector3 maxCorner = Vector3.zero;
-        Vector3[,] grid = CreateGrid(out minCorner, out maxCorner);
+        Vector3[,,] grid = CreateGrid(out minCorner, out maxCorner);
         int xDim = grid.GetLength(0);
-        int zDim = grid.GetLength(1);
+        int yDim = grid.GetLength(1);
+        int zDim = grid.GetLength(2);
 
         // Compute grid-positions.
-        for (int i = 0; i < xDim; i++)
+        for (int x = 0; x < xDim; x++)
         {
-            for (int j = 0; j < zDim; j++)
+            for (int y = 0; y < yDim; y++)
             {
-                grid[i, j] = new Vector3(
-                    minCorner.x + i * resolution,
-                    height,
-                    minCorner.z + j * resolution
-                );
+                for (int z = 0; z < zDim; z ++)
+                {
+                    grid[x, y, z] = new Vector3(
+                        minCorner.x + x * resolution,
+                        minCorner.y + y * resolution,
+                        minCorner.z + z * resolution
+                    );
+                }
             }
         }
 
-        float startComputation = Time.realtimeSinceStartup;
-        float[,] densities = ComputeDensityMap(positions, grid);
-        float endComputation = Time.realtimeSinceStartup;
-        Debug.Log("Density Computation: " + (endComputation - startComputation));
+        float[,,] densities = ComputeDensityMap(positions, grid);
 
-        float[,] gradientVals = new float[xDim, zDim];
+        float[,,] gradientVals = new float[xDim, yDim, zDim];
         if (compare)
         {
             // Reading in comparison data.
             List<Vector3> positionsComp = ReadData(fileNameCompare, agentTypeFilterComp, taskFilterComp);
 
             // Computing (unnormalized) density values of comparison data.
-            float[,] densitiesComp = ComputeDensityMap(positionsComp, grid);
+            float[,,] densitiesComp = ComputeDensityMap(positionsComp, grid);
 
             // Calculating the deltas between the density maps.
             Func<float, float, float> sub = (a, b) => a - b;
-            float[,] densityDeltas = EBDMath.BinaryOpElementWise(densities, densitiesComp, sub);
+            float[,,] densityDeltas = EBDMath.BinaryOpElementWise(densities, densitiesComp, sub);
 
             // Normalize such that either min(diffs) = -1.0 or max(diffs) = 1.0
             (float minDelta, float maxDelta) = EBDMath.MinMax(densityDeltas);
             float absMax = Mathf.Max(Mathf.Abs(minDelta), Mathf.Abs(maxDelta));
             Func<float, float> normalize = (x) => x / absMax;
-            float[,] normalized = EBDMath.UnaryOpElementWise(densityDeltas, normalize);
+            float[,,] normalized = EBDMath.UnaryOpElementWise(densityDeltas, normalize);
 
             // Threshold values if required.
             if (threshold < 1.0f)
@@ -227,7 +228,7 @@ public class ABMVisualizer : MonoBehaviour
         return positions;
     }
 
-    Vector3[,] CreateGrid(out Vector3 min, out Vector3 max)
+    Vector3[,,] CreateGrid(out Vector3 min, out Vector3 max)
     {
         min.x = Mathf.Min(corner1.transform.position.x, corner2.transform.position.x);
         max.x = Mathf.Max(corner1.transform.position.x, corner2.transform.position.x);
@@ -236,24 +237,30 @@ public class ABMVisualizer : MonoBehaviour
         min.z = Mathf.Min(corner1.transform.position.z, corner2.transform.position.z);
         max.z = Mathf.Max(corner1.transform.position.z, corner2.transform.position.z);
         float xRange = max.x - min.x;
+        float yRange = max.y - min.y;
         float zRange = max.z - min.z;
         int xDim = (int) Mathf.Floor(xRange / resolution);
+        int yDim = (int) Mathf.Floor(yRange / resolution);
         int zDim = (int) Mathf.Floor(zRange / resolution);
-        return new Vector3[xDim, zDim];
+        return new Vector3[xDim, yDim, zDim];
     }
 
-    float[,] ComputeDensityMap(List<Vector3> positions, Vector3[,] grid)
+    float[,,] ComputeDensityMap(List<Vector3> positions, Vector3[,,] grid)
     {   
         int xDim = grid.GetLength(0);
-        int zDim = grid.GetLength(1);
+        int yDim = grid.GetLength(1);
+        int zDim = grid.GetLength(2);
         
-        float[,] densities = new float[xDim, zDim];
+        float[,,] densities = new float[xDim, yDim, zDim];
 
         // Compute density values.
-        Parallel.For(0, xDim * zDim, k => {
-            int i = k / zDim;
-            int j = k % zDim;
-            densities[i,j] = ComputeDensity(grid[i,j], positions);
+        Parallel.For(0, xDim * yDim * zDim, k => {
+            int x = k / (yDim * zDim);
+            k -= x * yDim * zDim;
+            int y = k / zDim;
+            k -= y * zDim;
+            int z = k;
+            densities[x, y, z] = ComputeDensity(grid[x, y, z], positions);
         });
 
         return densities;
