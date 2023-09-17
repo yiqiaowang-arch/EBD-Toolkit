@@ -1,6 +1,6 @@
 ﻿/*
 DesignMind: A Toolkit for Evidence-Based, Cognitively- Informed and Human-Centered Architectural Design
-Copyright (C) 2023  michal Gath-Morad, Christoph Hölscher, Raphaël Baur
+Copyright (C) 2023 Michal Gath-Morad, Christoph Hölscher, Raphaël Baur
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using UnityEngine.AI;
+using System.Linq;
 
 public class ProcessWalkthrough : MonoBehaviour
 {
@@ -44,8 +45,6 @@ public class ProcessWalkthrough : MonoBehaviour
     // Private variables concerned with the raycast.
     private float outerConeRadiusHorizontal;
     private float outerConeRadiusVertical;
-    private float interSubconeDisplacement;
-    private float intraSubconeDisplacementAngle;
 
     // Visualization-related public variables.
     public float particleSize = 1.0f;
@@ -58,8 +57,8 @@ public class ProcessWalkthrough : MonoBehaviour
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;
     public string inSummarizedDataFileName;
-    private List<Vector3> hits = new List<Vector3>();
-    private float[] colors;
+    private List<Vector3> hitPositions = new List<Vector3>();
+    private List<float> kdeValues;
     private List<int[]> hitsPerLayer;
     public bool visualizeHeatmap = false;
     public bool visualizeTrajectory = false;
@@ -101,8 +100,8 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         // Set material of particle system.
         gameObject.GetComponent<ParticleSystemRenderer>().material = heatmapMaterial;
-        outerConeRadiusHorizontal = Mathf.Tan((horizontalViewAngle / 2.0f) * Mathf.Deg2Rad);
-        outerConeRadiusVertical = Mathf.Tan((verticalViewAngle / 2.0f) * Mathf.Deg2Rad);
+        outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
+        outerConeRadiusVertical = Mathf.Tan(verticalViewAngle / 2.0f * Mathf.Deg2Rad);
         hitsPerLayer = new List<int[]>();
         trajectoryTimes = new List<float[]>();
         trajectoryPositions = new List<Vector3[]>();
@@ -126,10 +125,6 @@ public class ProcessWalkthrough : MonoBehaviour
 
         numFiles = rawDataFileNames.Count;
 
-        // TODO: Remove after debug.
-        foreach (string fileName in rawDataFileNames)
-            Debug.Log(fileName);
-
         // Parse each file and populate the positions and direction arrays.
         foreach (string fileName in rawDataFileNames)
         {
@@ -152,7 +147,8 @@ public class ProcessWalkthrough : MonoBehaviour
                 CreateHeatMap();
                 WriteProcessedDataFile();
             }
-            CreateParticles();
+            ParticleSystem particleSystem = GetComponent<ParticleSystem>();
+            Visualization.SetupParticleSystem(particleSystem, hitPositions, kdeValues, heatmapGradient, particleSize);
         }
         if (visualizeTrajectory)
         {
@@ -207,61 +203,6 @@ public class ProcessWalkthrough : MonoBehaviour
                             float.Parse(substrs[2]));
     }
 
-    /* Returns a set points corresponding to collisions of rays from a cone-shaped raycast.
-     * @param viewPoint         Vector corresponding to the view-point.
-     * @param forward           Vector corresponging to the direction of sight.
-     * @param vertical          Vector corresponding to the vertical axis of the cone.
-     * @param horizontal        Vector corresponding to the horizontal axis of the cone.
-     * @return                  List of vectors corresponding to the collisions of the cone-raycast with the environment.
-     */
-    private List<Vector3> CastAndCollide(Vector3 viewPoint, Vector3 forward, Vector3 vertical, Vector3 horizontal, ref int[] hitsPerLayer)
-    {
-        Vector3 hitPos = Vector3.zero;
-        List<Vector3> results = new List<Vector3>();
-        for (int i = 0; i < raysPerRaycast; i++)
-        {
-            Vector3 p = viewPoint
-                        + forward
-                        + vertical * Random.value * outerConeRadiusVertical * Mathf.Sin(2.0f * Mathf.PI * Random.value)
-                        + horizontal * Random.value * outerConeRadiusHorizontal * Mathf.Sin(2.0f * Mathf.PI * Random.value);
-            if (Collision(viewPoint, p - viewPoint, ref hitPos, ref hitsPerLayer))
-            {
-                results.Add(hitPos);
-            }
-        }
-
-        return results;
-    }
-
-    bool Collision(Vector3 start, Vector3 dir, ref Vector3 hitPos, ref int[] hitsPerLayer)
-    {
-        // If a hit occurs, this will hold all the information about it.
-        RaycastHit hit;
-
-        // Casting the ray and checking for collision.
-        if (!Physics.Raycast(start, dir, out hit))
-        {
-            return false;
-        }
-
-        
-        // The MeshCollider the ray hit. NULL-check.
-        MeshCollider meshCollider = hit.collider as MeshCollider;
-        if (meshCollider == null || meshCollider.sharedMesh == null)
-        {
-            return false;
-        }
-
-        // Check if it is in the desired layer.
-        if (!(layerMask == (layerMask | (1 << meshCollider.gameObject.layer))))
-        {
-            return false;
-        }
-        hitsPerLayer[meshCollider.gameObject.layer] += 1;
-        hitPos = hit.point;
-        return true;
-    }
-
     /* Makes sure filename is unique and output directory exists.
      * @param dirName       Name of directory.
      * @param fileName      Proposed name of file.
@@ -296,20 +237,6 @@ public class ProcessWalkthrough : MonoBehaviour
             path = dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format;
         }
         return path;
-    }
-
-    void CreateParticles() 
-    {
-        ParticleSystem.Particle[] particles = new ParticleSystem.Particle[particlePositions.Length];
-        for (int i = 0; i < particles.Length; i++)
-        {
-            particles[i].position = particlePositions[i];
-            particles[i].velocity = Vector3.zero;
-            particles[i].size = particleSize;
-            particles[i].color = heatmapGradient.Evaluate(colors[i]);
-        }
-        ParticleSystem partSys = GetComponent<ParticleSystem>();
-        partSys.SetParticles(particles, particles.Length);
     }
 
     void Update()
@@ -356,84 +283,68 @@ public class ProcessWalkthrough : MonoBehaviour
         return (times, positions, forwardDirections, upDirections, rightDirections);
     }
 
+    private List<Vector3> ComputeHitPositions(
+        List<Vector3> positions,
+        List<Vector3> forwardDirections,
+        List<Vector3> upDirections,
+        List<Vector3> rightDirections,
+        float radiusVertical,
+        float radiusHorizontal,
+        int numRaysPerRaycast,
+        LayerMask layerMask,
+        ref int[] hitCountPerLayer)
+    {
+        List<Vector3> hitPositions = new List<Vector3>();
+
+        // For each trajectory.
+        for (int j = 0; j < positions.Count; j++)
+        {
+            hitPositions.AddRange(
+                VisualAttention.CastAndCollide(
+                    positions[j],
+                    forwardDirections[j],
+                    upDirections[j],
+                    rightDirections[j],
+                    radiusVertical,
+                    radiusHorizontal,
+                    numRaysPerRaycast,
+                    layerMask,
+                    ref hitCountPerLayer));
+        }
+        return hitPositions;
+    }
+
     private void CreateHeatMap()
     {
-
-        // Will hold all the positions where the rays hit.
-        hits = new List<Vector3>();
-
         // Unity generates 32 layers per default.
         hitsPerLayer = new List<int[]>();
 
-        for (int i = 0; i < numFiles; i++)
+        // Flatten trajectory data.
+        List<Vector3> allPositions = trajectoryPositions.SelectMany(array => array).ToList();
+        List<Vector3> allForwards = trajectoryPositions.SelectMany(array => array).ToList();
+        List<Vector3> allUps = trajectoryPositions.SelectMany(array => array).ToList();
+        List<Vector3> allRights = trajectoryPositions.SelectMany(array => array).ToList();
+
+        for (int i = 0; i < trajectoryPositions.Count; i++)
         {
-            Vector3[] currPositions = trajectoryPositions[i];
-            Vector3[] currForwardDirections = trajectoryForwardDirections[i];
-            Vector3[] currUpDirections = trajectoryUpDirections[i];
-            Vector3[] currRightDirections = trajectoryRightDirections[i];
-            int[] currHitsPerLayer = new int[32];  // Unity has 32 layers by default.
-            for (int j = 0; j < currPositions.Length; j++)
-            {
-                hits.AddRange(
-                    CastAndCollide(
-                        currPositions[j],
-                        currForwardDirections[j],
-                        currUpDirections[j],
-                        currRightDirections[j],
-                        ref currHitsPerLayer
-                    )
-                );
-            }
+            // Compute hit positions for each trajectory.
+            int[] currHitsPerLayer = new int[32];
+            hitPositions.AddRange(
+                ComputeHitPositions(
+                    trajectoryPositions[i].ToList(),
+                    trajectoryForwardDirections[i].ToList(),
+                    trajectoryUpDirections[i].ToList(),
+                    trajectoryRightDirections[i].ToList(),
+                    outerConeRadiusVertical,
+                    outerConeRadiusHorizontal,
+                    raysPerRaycast,
+                    layerMask,
+                    ref currHitsPerLayer));
             hitsPerLayer.Add(currHitsPerLayer);
         }
 
-        int n = hits.Count;
-        
-        // Calculate the distances between each hit.
-        List<float> distances = new List<float>();
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = i + 1; j < n; j++)
-            {
-                distances.Add(Vector3.Distance(hits[j], hits[i]));
-            }
-        }
-
-        float[] avgDistances = new float[hits.Count];
-        for (int i = 0; i < n; i++)
-        {
-            float avg = 0;
-            int offset = 0;
-            int C = 0;
-            for (int j = 1; j <= i; j++)
-            {
-                avg += Mathf.Exp(-distances[offset + i - j] / h);
-                offset += n - j;
-                C++;
-            }
-            for (int j = 0; j < n - i - 1; j++)
-            {
-                avg += Mathf.Exp(-distances[offset + j] / h);
-                C++;
-            }
-            avgDistances[i] = avg / (C * h);
-        }
-        float min = float.MaxValue;
-        float max = 0.0f;
-        for (int i = 0; i < n; i++)
-        {
-            min = avgDistances[i] < min ? avgDistances[i] : min;
-            max = avgDistances[i] > max ? avgDistances[i] : max;
-        }
-
-        float range = max - min;
-
-        colors = new float[hits.Count];
-        for (int i = 0; i < hits.Count; i++)
-        {
-            colors[i] = (avgDistances[i] - min) / range;
-        }
-        particlePositions = hits.ToArray();
+        kdeValues = Visualization.KernelDensityEstimate(hitPositions, h);
+        particlePositions = hitPositions.ToArray();
     }
 
     private void LoadHeatMap()
@@ -441,12 +352,12 @@ public class ProcessWalkthrough : MonoBehaviour
         // Reading in the heatmap-data from prior processing and creating arrays for positions and colors \in [0, 1].
         string[] allLines = File.ReadAllLines(inProcessedDataFileName);
         particlePositions = new Vector3[allLines.Length];
-        colors = new float[allLines.Length];
+        kdeValues = new List<float>();
         for (int i = 0; i < allLines.Length; i++)
         {
             string[] line = allLines[i].Split(csvSep);
             particlePositions[i] = new Vector3(float.Parse(line[0]), float.Parse(line[1]), float.Parse(line[2]));
-            colors[i] = float.Parse(line[3]);
+            kdeValues[i] = float.Parse(line[3]);
         }
     }
 
@@ -454,9 +365,9 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         using (StreamWriter processedDataFile = new StreamWriter(outProcessedDataFileName))
         {
-            for (int i = 0; i < hits.Count; i++)
+            for (int i = 0; i < hitPositions.Count; i++)
             {
-                processedDataFile.WriteLine(hits[i].x + csvSep + hits[i].y +csvSep+ hits[i].z + colors[i]);
+                processedDataFile.WriteLine(hitPositions[i].x + csvSep + hitPositions[i].y +csvSep+ hitPositions[i].z + kdeValues[i]);
             }
         }
     }
@@ -502,8 +413,6 @@ public class ProcessWalkthrough : MonoBehaviour
             Debug.Log($"Average speed: {distances[i] / durations[i]}");
         }
 
-
-
         // Shortest path distances.
         for (int i = 0; i < numFiles; i++)
         {
@@ -532,7 +441,6 @@ public class ProcessWalkthrough : MonoBehaviour
             shortestPathDistances.Add(currDistance);
         }
 
-
         // Surplus distance to shortest path.
         for (int i = 0; i < numFiles; i++)
         {
@@ -545,8 +453,6 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             ratioShortestPaths.Add(distances[i] / shortestPathDistances[i]);
         }
-
-        
 
         // Whether the run was successful.
         for (int i = 0; i < numFiles; i++)
@@ -640,97 +546,5 @@ public class ProcessWalkthrough : MonoBehaviour
         lineRenderer.widthMultiplier = trajectoryWidth;
         lineRenderer.positionCount = positions.Count;
         lineRenderer.SetPositions(positions.ToArray());
-    }
-
-    private Mesh CreateTrajectoryMesh(Vector3[] positions, Vector3[] upDirections, Vector3[] rightDirections, int resolution, float thickness)
-    {
-        int numPos = positions.Length;
-        float radIncrement = 2 * Mathf.PI / resolution;
-
-        // For each position in the trajectory, we create a surrounding ring of <resolution> vertices.
-        Vector3[] vertices = new Vector3[numPos * resolution];
-        Vector3[] normals = new Vector3[numPos * resolution];
-        Color[] colors = new Color[numPos * resolution];
-
-        // Calculate maximal distance between timesteps.
-        float maxDist = 0.0f;
-        for (int i = 0; i < numPos - 1; i++)
-        {
-            float currDist = Vector3.Distance(positions[i + 1], positions[i]);
-            maxDist = currDist > maxDist ? currDist : maxDist;
-        }
-
-        Color currColor = Color.black; // Initialize as black.
-
-        for (int i = 0; i < numPos; i++)
-        {
-            Vector3 currPos = positions[i];
-            Vector3 currRight = rightDirections[i];
-            Vector3 currUp = upDirections[i];
-
-            if (i >= 1 && i < numPos - 1)
-            {
-                // Averaged direction of segments adjacent to current position.
-                Vector3 lastDir = positions[i] - positions[i - 1];
-                Vector3 nextDir = positions[i + 1] - positions[i];
-                Vector3 ringPlaneNormal = (lastDir + nextDir) / 2;
-
-                // Project right vector and up vector onto this new plane.
-                currRight = Vector3.Normalize(Vector3.ProjectOnPlane(currRight, ringPlaneNormal));
-                currUp = Vector3.Normalize(Vector3.ProjectOnPlane(currUp, ringPlaneNormal));
-            }
-
-            if (i < numPos - 1)
-            {
-                currColor = trajectoryGradient.Evaluate(Vector3.Distance(positions[i + 1], positions[i]) / maxDist);
-            }
-
-            // The surrounding ring lies on the plane spanned by the up and right vectors.
-            for (int j = 0; j < resolution; j++)
-            {
-                Vector3 vertex = positions[i] + thickness * Mathf.Cos(radIncrement * j) * currRight + thickness * Mathf.Sin(radIncrement * j) * currUp;
-                normals[i * resolution + j] = Mathf.Cos(radIncrement * j) * currRight + Mathf.Sin(radIncrement * j) * currUp;
-                Debug.DrawRay(vertex, 0.1f * normals[i * resolution + j], Color.blue, 120.0f);
-                vertices[i * resolution + j] = vertex;
-                colors[i * resolution + j] = currColor;
-            }
-        }
-
-        // The forward triangles:
-        int[] triangles = new int[(numPos - 1) * (resolution - 1) * 2 * 3];
-        int triIdx = 0;
-        for (int i = 0; i < numPos - 1; i++)
-        {
-            for (int j = 0; j < resolution - 1; j++)
-            {
-                triangles[triIdx * 3] = i * resolution + j;
-                triangles[triIdx * 3 + 1] = i * resolution + j + 1;
-                triangles[triIdx * 3 + 2] = (i + 1) * resolution + j;
-                triIdx++;
-            }
-        }
-
-        // The backward triangles:
-        for (int i = 1; i < numPos; i++)
-        {
-            for (int j = 1; j < resolution; j++)
-            {
-                triangles[triIdx * 3] = i * resolution + j;
-                triangles[triIdx * 3 + 1] = i * resolution + j - 1;
-                triangles[triIdx * 3 + 2] = (i - 1) * resolution + j;
-                triIdx++;
-            }
-        }
-
-        Mesh mesh = new Mesh();
-        GameObject go = new GameObject();
-        go.AddComponent<MeshFilter>();
-        go.GetComponent<MeshFilter>().mesh = mesh;
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.normals = normals;
-        mesh.colors = colors;
-        go.AddComponent<MeshRenderer>();
-        return mesh;
     }
 }
