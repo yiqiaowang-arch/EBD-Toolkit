@@ -1,0 +1,12 @@
+cff-version: 1.1.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Baur
+    given-names: Raphaël
+  - family-names: Gath-Morad
+    given-names: Michal
+  - family-names: Hölscher
+    given-names: Christoph
+title: DesignMind Toolkit
+version: v0.0.0-alpha
+date-released: 2023-04-01
