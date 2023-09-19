@@ -1,4 +1,22 @@
-﻿using System.Collections;
+﻿/*
+DesignMind: A Toolkit for Evidence-Based, Cognitively- Informed and Human-Centered Architectural Design
+Copyright (C) 2023  michal Gath-Morad, Christoph Hölscher, Raphaël Baur
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>
+*/
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
@@ -13,9 +31,9 @@ public class ABMVisualizer : MonoBehaviour
     public List<string> taskFilter;
     public int agentFlags;
     public int taskFlags;
-    public string file;
+    public string fileName;
     public bool compare = false;
-    public string fileComp;
+    public string fileNameCompare;
     public List<string> agentTypeFilterComp;
     public List<string> taskFilterComp;
     public int agentFlagsComp;
@@ -24,24 +42,16 @@ public class ABMVisualizer : MonoBehaviour
     public GameObject corner2;
     public float smoothness = 1.0f;
     public Gradient gradient;
-    public Gradient gradientComp;
+    public Gradient gradientCompare;
     public float resolution;
     public float height;
     public float threshold = 1.0f;
     public string delim = ";";
+    private float[,,,] _distances; // [x_dim, y_dim, z_dim, n_points]
 
     // Start is called before the first frame update
     void Start()
     {
-        if (threshold <= 0.0)
-        {
-            throw new Exception("Threshold needs to be strictly larger than 0");
-        }
-        if (smoothness <= 0.0)
-        {
-            throw new Exception("Smoothness needs to be strictly larger than 0");
-        }
-
         // Removing leading and trailing whitespaces.
         for (int i = 0; i < agentTypeFilter.Count; i++) {
             agentTypeFilter[i] = agentTypeFilter[i].Trim();
@@ -62,47 +72,51 @@ public class ABMVisualizer : MonoBehaviour
             taskFilterComp[i] = taskFilterComp[i].Trim();
         }
 
-        List<Vector3> positions = ReadData(file, agentTypeFilter, taskFilter);
+        List<Vector3> positions = ReadData(fileName, agentTypeFilter, taskFilter);
 
         Vector3 minCorner = Vector3.zero;
         Vector3 maxCorner = Vector3.zero;
-        Vector3[,] grid = CreateGrid(out minCorner, out maxCorner);
+        Vector3[,,] grid = CreateGrid(out minCorner, out maxCorner);
         int xDim = grid.GetLength(0);
-        int zDim = grid.GetLength(1);
+        int yDim = grid.GetLength(1);
+        int zDim = grid.GetLength(2);
 
         // Compute grid-positions.
-        for (int i = 0; i < xDim; i++)
+        for (int x = 0; x < xDim; x++)
         {
-            for (int j = 0; j < zDim; j++)
+            for (int y = 0; y < yDim; y++)
             {
-                grid[i, j] = new Vector3(
-                    minCorner.x + i * resolution,
-                    height,
-                    minCorner.z + j * resolution
-                );
+                for (int z = 0; z < zDim; z ++)
+                {
+                    grid[x, y, z] = new Vector3(
+                        minCorner.x + x * resolution,
+                        minCorner.y + y * resolution,
+                        minCorner.z + z * resolution
+                    );
+                }
             }
         }
 
-        float[,] densities = ComputeDensityMap(positions, grid);
+        float[,,] densities = ComputeDensityMap(positions, grid);
 
-        float[,] gradientVals = new float[xDim, zDim];
+        float[,,] gradientVals = new float[xDim, yDim, zDim];
         if (compare)
         {
             // Reading in comparison data.
-            List<Vector3> positionsComp = ReadData(fileComp, agentTypeFilterComp, taskFilterComp);
+            List<Vector3> positionsComp = ReadData(fileNameCompare, agentTypeFilterComp, taskFilterComp);
 
             // Computing (unnormalized) density values of comparison data.
-            float[,] densitiesComp = ComputeDensityMap(positionsComp, grid);
+            float[,,] densitiesComp = ComputeDensityMap(positionsComp, grid);
 
             // Calculating the deltas between the density maps.
             Func<float, float, float> sub = (a, b) => a - b;
-            float[,] densityDeltas = EBDMath.BinaryOpElementWise(densities, densitiesComp, sub);
+            float[,,] densityDeltas = EBDMath.BinaryOpElementWise(densities, densitiesComp, sub);
 
             // Normalize such that either min(diffs) = -1.0 or max(diffs) = 1.0
             (float minDelta, float maxDelta) = EBDMath.MinMax(densityDeltas);
             float absMax = Mathf.Max(Mathf.Abs(minDelta), Mathf.Abs(maxDelta));
             Func<float, float> normalize = (x) => x / absMax;
-            float[,] normalized = EBDMath.UnaryOpElementWise(densityDeltas, normalize);
+            float[,,] normalized = EBDMath.UnaryOpElementWise(densityDeltas, normalize);
 
             // Threshold values if required.
             if (threshold < 1.0f)
@@ -136,12 +150,15 @@ public class ABMVisualizer : MonoBehaviour
         float[] gradientValsFlat = EBDMath.Flatten(gradientVals).ToArray();
 
         (float min, float max) = EBDMath.MinMax(gradientVals);
-        createParticles(
+        float startRender = Time.realtimeSinceStartup;
+        CreateParticles(
             gridFlat,
             gradientValsFlat,
             resolution,
-            compare ? gradientComp : gradient
+            compare ? gradientCompare : gradient
         );
+        float endRender = Time.realtimeSinceStartup;
+        Debug.Log("Time rendering: " + (endRender - startRender));
     }
 
     private List<Vector3> CreateTrajectory(string[] str, int startIdx)
@@ -179,15 +196,14 @@ public class ABMVisualizer : MonoBehaviour
         return res;
     }
 
-    void createParticles(Vector3[] positions, float[] colors, float size, Gradient gradient) {
+    void CreateParticles(Vector3[] positions, float[] colors, float size, Gradient gradient) {
         ParticleSystem.Particle[] particles = new ParticleSystem.Particle[positions.Length];
-        for (int i = 0; i < particles.Length; i++)
-        {
+        Parallel.For(0, particles.Length, i => {
             particles[i].position = positions[i];
             particles[i].velocity = Vector3.zero;
             particles[i].size = size;
             particles[i].color = gradient.Evaluate(colors[i]);
-        }
+        });
         ParticleSystem partSys = GetComponent<ParticleSystem>();
         partSys.SetParticles(particles, particles.Length);
     }
@@ -198,7 +214,7 @@ public class ABMVisualizer : MonoBehaviour
         List<string> taskFilter
     )
     {
-        string[] lines = File.ReadAllLines(file);
+        string[] lines = File.ReadAllLines(fileName);
 
         // Determine first column that contains position-data.
         int posStartIdx = 0;
@@ -230,7 +246,7 @@ public class ABMVisualizer : MonoBehaviour
         return positions;
     }
 
-    Vector3[,] CreateGrid(out Vector3 min, out Vector3 max)
+    Vector3[,,] CreateGrid(out Vector3 min, out Vector3 max)
     {
         min.x = Mathf.Min(corner1.transform.position.x, corner2.transform.position.x);
         max.x = Mathf.Max(corner1.transform.position.x, corner2.transform.position.x);
@@ -239,26 +255,35 @@ public class ABMVisualizer : MonoBehaviour
         min.z = Mathf.Min(corner1.transform.position.z, corner2.transform.position.z);
         max.z = Mathf.Max(corner1.transform.position.z, corner2.transform.position.z);
         float xRange = max.x - min.x;
+        float yRange = max.y - min.y;
         float zRange = max.z - min.z;
         int xDim = (int) Mathf.Floor(xRange / resolution);
+        int yDim = (int) Mathf.Floor(yRange / resolution);
         int zDim = (int) Mathf.Floor(zRange / resolution);
-        return new Vector3[xDim, zDim];
+        return new Vector3[xDim, yDim, zDim];
     }
 
-    float[,] ComputeDensityMap(List<Vector3> positions, Vector3[,] grid)
+    float[,,] ComputeDensityMap(List<Vector3> positions, Vector3[,,] grid)
     {   
         int xDim = grid.GetLength(0);
-        int zDim = grid.GetLength(1);
+        int yDim = grid.GetLength(1);
+        int zDim = grid.GetLength(2);
         
-        float[,] densities = new float[xDim, zDim];
+        float[,,] densities = new float[xDim, yDim, zDim];
 
         // Compute density values.
-        Parallel.For(0, xDim * zDim, k => {
-            int i = k / zDim;
-            int j = k % zDim;
-            densities[i,j] = ComputeDensity(grid[i,j], positions);
+        Parallel.For(0, xDim * yDim * zDim, k => {
+            int x = k / (yDim * zDim);
+            k -= x * yDim * zDim;
+            int y = k / zDim;
+            k -= y * zDim;
+            int z = k;
+            densities[x, y, z] = ComputeDensity(grid[x, y, z], positions);
         });
 
         return densities;
-    }   
+    }
+
+    void Update() {
+    }
 }
