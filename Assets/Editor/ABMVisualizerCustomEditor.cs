@@ -9,76 +9,110 @@ public class ABMVisualizerCustomEditor : Editor
 {
     ABMVisualizer visualizer;
     UnityEditor.AnimatedValues.AnimBool compareAnimBool;
+    Dictionary<string, HashSet<string>> agentTypeToTask;
+    Dictionary<string, HashSet<string>> agentTypeToTaskCompare;
 
     void OnEnable()
     {
         compareAnimBool = new UnityEditor.AnimatedValues.AnimBool();
         visualizer = (ABMVisualizer) target;
-        string initialFile = Directory.GetFiles("Data_ABM")[0];
-        visualizer.file = visualizer.file == "" ? initialFile : visualizer.file;
-        visualizer.fileComp = visualizer.fileComp == "" ? initialFile : visualizer.fileComp;
+
+        // If the file to read from is either unitialized or the path does not
+        // exist anymore, just set the first file in the Data_ABM directory.
+        // Else, use the existing file.
+        visualizer.fileName = GetValidInitialFileName(visualizer.fileName);
+        visualizer.fileNameCompare = GetValidInitialFileName(visualizer.fileNameCompare);
+        agentTypeToTask = GetAgentTypesToTasks(
+            visualizer.fileName,
+            delim: visualizer.delim
+        );
+        agentTypeToTaskCompare = GetAgentTypesToTasks(
+            visualizer.fileNameCompare,
+            delim: visualizer.delim
+        );
     }
 
     public override void OnInspectorGUI()
     {
-        HandleAgentTaskSelection(isCompare: false);       
+        EditorGUI.BeginChangeCheck();
+
+        HandleAgentTaskSelection(isCompare: false); 
+        SerializedObject serializedGradient = HandleGradient("gradient");     
 
         visualizer.compare = GUILayout.Toggle(visualizer.compare, new GUIContent("Compare"));
         compareAnimBool.target = visualizer.compare;
 
+        SerializedObject serializedGradientCompare = null;
         if (EditorGUILayout.BeginFadeGroup(compareAnimBool.faded))
         {
-            HandleAgentTaskSelection(isCompare: true); 
+            HandleAgentTaskSelection(isCompare: true);
+            serializedGradientCompare = HandleGradient("gradientCompare");
         }
         EditorGUILayout.EndFadeGroup();
 
-        visualizer.corner1 = EditorGUILayout.ObjectField(
+        GameObject corner1 = EditorGUILayout.ObjectField(
             new GUIContent("Corner 1", "One corner of the rectangular area to visualize"),
             visualizer.corner1,
             typeof(GameObject),
             true
         ) as GameObject;
 
-        visualizer.corner2 = EditorGUILayout.ObjectField(
+        GameObject corner2 = EditorGUILayout.ObjectField(
             new GUIContent("Corner 2", "Other corner of the rectangular area to visualize"),
             visualizer.corner2,
             typeof(GameObject),
             true
         ) as GameObject;
 
-        visualizer.resolution = EditorGUILayout.Slider(
+        float resolution = EditorGUILayout.Slider(
             new GUIContent("Pixel Size", "Size of a single pixel. The lower, the higher the resolution of the heatmap."),
             visualizer.resolution,
-            0.05f,
+            0.1f,
             1.0f
         );
 
-        visualizer.smoothness = EditorGUILayout.Slider(
+        float smoothness = EditorGUILayout.Slider(
             new GUIContent("Smoothness", "Scale of the kernel density kernel. The larger, the smoother the heatmap will look, but the more detail you will lose."),
             visualizer.smoothness,
             0.1f,
             1.0f
         );
 
-        visualizer.height = EditorGUILayout.Slider(
+        float height = EditorGUILayout.Slider(
             new GUIContent("Y Coordinate", "Height of the cutting plane the heatmap will be displayed on"),
             visualizer.height,
             0.0f,
             5.0f
         );
 
-        visualizer.threshold = EditorGUILayout.Slider(
+        float threshold = EditorGUILayout.Slider(
             new GUIContent("Density Threshold", "Density values will be normalized in the range ]0, threshold]"),
             visualizer.threshold,
             0.001f,
             1.0f
         );
+
+        // Set new properties only if there was a change.
+        if (EditorGUI.EndChangeCheck())
+        {
+            Debug.Log("here");
+            visualizer.corner1 = corner1;
+            visualizer.corner2 = corner2;
+            visualizer.resolution = resolution;
+            visualizer.smoothness = smoothness;
+            visualizer.height = height;
+            visualizer.threshold = threshold;
+            serializedGradient.ApplyModifiedProperties();
+            if (serializedGradientCompare != null) {
+                serializedGradientCompare.ApplyModifiedProperties();
+            }
+        }
     }
 
 
-    Dictionary<string, HashSet<string>> GetAgentTypesToTasks(string filename, string delim = ";")
+    Dictionary<string, HashSet<string>> GetAgentTypesToTasks(string fileName, string delim = ";")
     {
-        string[] lines = File.ReadAllLines(filename);
+        string[] lines = File.ReadAllLines(fileName);
         Dictionary<string, HashSet<string>> dict = new Dictionary<string, HashSet<string>>();
         foreach (string line in lines.Skip(1))
         {
@@ -107,6 +141,7 @@ public class ABMVisualizerCustomEditor : Editor
 
     void HandleAgentTaskSelection(bool isCompare)
     {
+        EditorGUI.BeginChangeCheck();
         if (GUILayout.Button("Choose data file"))
         {
             string fileName = EditorUtility.OpenFilePanel("Choose data file", "Data_ABM", "csv");
@@ -114,28 +149,31 @@ public class ABMVisualizerCustomEditor : Editor
             {
                 if (isCompare)
                 {
-                    visualizer.fileComp = fileName;
+                    visualizer.fileNameCompare = fileName;
                 }
                 else
                 {
-                    visualizer.file = fileName;
+                    visualizer.fileName = fileName;
                 }
-            }            
+            }         
         }
 
         if (isCompare)
         {
-            GUILayout.TextField(visualizer.fileComp);
+            GUILayout.TextField(visualizer.fileNameCompare);
         }
         else
         {
-            GUILayout.TextField(visualizer.file);
+            GUILayout.TextField(visualizer.fileName);
         }
 
-        Dictionary<string, HashSet<string>> agentTypeToTask = GetAgentTypesToTasks(
-            isCompare ? visualizer.fileComp : visualizer.file,
-            delim: visualizer.delim
-        );
+        if (EditorGUI.EndChangeCheck())
+        {
+            Dictionary<string, HashSet<string>> agentTypeToTask = GetAgentTypesToTasks(
+                isCompare ? visualizer.fileNameCompare : visualizer.fileName,
+                delim: visualizer.delim
+            );
+        }
         string[] agentOptions = agentTypeToTask.Keys.ToArray();
         List<string> selectedAgents;
         if (isCompare)
@@ -166,18 +204,30 @@ public class ABMVisualizerCustomEditor : Editor
                 visualizer.taskFilter = HandlePopup(ref visualizer.taskFlagsComp, taskOptions, "Tasks");
             }
         }
-        HandleGradient(isCompare ? "gradientComp" : "gradient");
     }
 
-    void HandleGradient(string gradientName)
+    SerializedObject HandleGradient(string gradientName)
     {
-        EditorGUI.BeginChangeCheck();
         SerializedObject serializedHeatmapGradient = new SerializedObject(visualizer);
         SerializedProperty heatmapGradient = serializedHeatmapGradient.FindProperty(gradientName);
         EditorGUILayout.PropertyField(heatmapGradient, true);
-        if (EditorGUI.EndChangeCheck())
+        return serializedHeatmapGradient;
+    }
+
+    private string GetValidInitialFileName(string currentFileName)
+    {
+        if (File.Exists(currentFileName))
         {
-            serializedHeatmapGradient.ApplyModifiedProperties();
+            return currentFileName;
+        }
+        string[] generatedFileNames = Directory.GetFiles("Data_ABM");
+        if (generatedFileNames.Length == 0)
+        {
+            throw new System.Exception("You are attempting to visualize ABM data, but no ABM data has been generated. Please run an ABM simulation first.");
+        }
+        else
+        {
+            return generatedFileNames[0];
         }
     }
 }
