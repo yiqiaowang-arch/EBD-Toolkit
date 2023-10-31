@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using System.Linq;
 using UnityEditor;
 using System.Globalization;
+using EBD;
 
 public class CaptureWalkthrough : MonoBehaviour
 {
@@ -58,7 +58,7 @@ public class CaptureWalkthrough : MonoBehaviour
         xAngle = new List<float>();
         time = new List<float>();
 
-        fileName = MakeFileNameUnique(fileName);
+        fileName = IO.MakeFileNameUnique(directory, fileName, "csv");
 
         Debug.Log("Writing raw data to " + fileName);
 
@@ -93,7 +93,7 @@ public class CaptureWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
 
             // Write data.
-            CSVWriter.WriteToCSV(fileName, columnNames, data, csvSep);
+            IO.WriteToCSV(fileName, columnNames, data, csvSep);
             EditorApplication.ExitPlaymode();
         }
     }
@@ -142,29 +142,6 @@ public class CaptureWalkthrough : MonoBehaviour
         return (columnNames, data);
     }
 
-    private string MakeFileNameUnique(string path)
-    {
-        // If the file does not exist yet, we can just return the input path.
-        if (!File.Exists(path))
-        {
-            return path;
-        }
-
-        string[] splitPath = path.Split('/');
-        string pathWithoutFileName = "";
-        for (int i = 0; i < splitPath.Length - 1; i++) {
-            pathWithoutFileName += splitPath[i] + "/";
-        }
-        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
-        string extension = Path.GetExtension(path);
-        int wildCard = 0;
-        while (File.Exists(pathWithoutFileName + fileNameWithoutExtension + "_" + wildCard.ToString() + extension))
-        {
-            wildCard++;
-        }
-        return pathWithoutFileName + fileNameWithoutExtension + "_" + wildCard.ToString() + extension;
-    }
-
     // Need to define this as well in case the trial is ended before the player can reach the end.
     void OnDestroy()
     {
@@ -174,7 +151,7 @@ public class CaptureWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
 
             // Write data.
-            CSVWriter.WriteToCSV(fileName, columnNames, data, csvSep);
+            IO.WriteToCSV(fileName, columnNames, data, csvSep);
         }
     }
 }

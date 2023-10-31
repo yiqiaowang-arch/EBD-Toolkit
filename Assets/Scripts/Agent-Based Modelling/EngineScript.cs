@@ -23,6 +23,7 @@ using UnityEngine.AI;
 using System.IO;
 using System;
 using System.Globalization;
+using EBD;
 
 public class EngineScript : MonoBehaviour
 {
@@ -99,7 +100,7 @@ public class EngineScript : MonoBehaviour
         for (int i = 0; i < agents.Length; i++) {
             agents[i] = new List<GameObject>();
         }
-        path = makeFileNameUnique(dataFolder, fileName, "csv");
+        path = IO.MakeFileNameUnique(dataFolder, fileName, "csv");
 
         agentToPos = new List<List<Vector3>>[tasks.Length];
         agentToColl = new List<int>[tasks.Length];
@@ -225,36 +226,6 @@ public class EngineScript : MonoBehaviour
                 }
             }
         }
-    }
-
-    string makeFileNameUnique(string dirName, string fileName, string format)
-    {
-        // Create directory if does not exist.
-        Directory.CreateDirectory(dirName);
-
-        // This is the path the file will be written to.
-        string path = dirName + Path.DirectorySeparatorChar + fileName + "." + format;
-        
-        // Check if specified file exists yet and if user wants to overwrite.
-        if (File.Exists(path))
-        {
-            /* In this case we need to make the filename unique.
-             * We will achiece that by:
-             * foldername + sep + filename + . + format -> foldername + sep + filename + _x + . format
-             * x will be increased in case of multiple overwrites.
-             */
-            
-            // Check if there was a previous overwrite and get highest identifier.
-            int id = 0;
-            while (File.Exists(dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format))
-            {
-                id++;
-            }
-
-            // Now we have found a unique identifier and create the new name.
-            path = dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format;
-        }
-        return path;
     }
 
     void OnDestroy() {

@@ -203,42 +203,6 @@ public class ProcessWalkthrough : MonoBehaviour
                             float.Parse(substrs[2]));
     }
 
-    /* Makes sure filename is unique and output directory exists.
-     * @param dirName       Name of directory.
-     * @param fileName      Proposed name of file.
-     * @param format        Format of file.
-     * @out                 Unique file-name.
-     */
-    string makeFileNameUnique(string dirName, string fileName, string format)
-    {
-        // Create directory if does not exist.
-        Directory.CreateDirectory(dirName);
-
-        // This is the path the file will be written to.
-        string path = dirName + Path.DirectorySeparatorChar + fileName + "." + format;
-        
-        // Check if specified file exists yet and if user wants to overwrite.
-        if (File.Exists(path))
-        {
-            /* In this case we need to make the filename unique.
-             * We will achiece that by:
-             * foldername + sep + filename + . + format -> foldername + sep + filename + _x + . format
-             * x will be increased in case of multiple overwrites.
-             */
-            
-            // Check if there was a previous overwrite and get highest identifier.
-            int id = 0;
-            while (File.Exists(dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format))
-            {
-                id++;
-            }
-
-            // Now we have found a unique identifier and create the new name.
-            path = dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + format;
-        }
-        return path;
-    }
-
     void Update()
     {
         if (visualizeTrajectory)
