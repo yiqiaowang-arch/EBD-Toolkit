@@ -100,7 +100,7 @@ public class EngineScript : MonoBehaviour
         for (int i = 0; i < agents.Length; i++) {
             agents[i] = new List<GameObject>();
         }
-        path = IO.MakeFileNameUnique(dataFolder, fileName, "csv");
+        path = IO.GenerateUniqueFilename(dataFolder, fileName, "csv");
 
         agentToPos = new List<List<Vector3>>[tasks.Length];
         agentToColl = new List<int>[tasks.Length];

@@ -58,7 +58,7 @@ public class CaptureWalkthrough : MonoBehaviour
         xAngle = new List<float>();
         time = new List<float>();
 
-        fileName = IO.MakeFileNameUnique(directory, fileName, "csv");
+        fileName = IO.GenerateUniqueFilename(directory, fileName, "csv");
 
         Debug.Log("Writing raw data to " + fileName);
 

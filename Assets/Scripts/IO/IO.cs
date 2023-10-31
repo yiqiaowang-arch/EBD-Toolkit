@@ -48,13 +48,13 @@ namespace EBD
             }
         }
 
-        public static string MakeFileNameUnique(string dirName, string fileName, string extension)
+        public static string GenerateUniqueFilename(string dirName, string fileName, string extension)
         {
             // Create directory if does not exist.
             Directory.CreateDirectory(dirName);
 
             // This is the path the file will be written to.
-            string path = dirName + Path.DirectorySeparatorChar + fileName + "." + extension;
+            string path = Path.Combine(dirName, fileName + "." + extension);
             
             // Check if specified file exists yet and if user wants to overwrite.
             if (File.Exists(path))
@@ -67,13 +67,13 @@ namespace EBD
                 
                 // Check if there was a previous overwrite and get highest identifier.
                 int id = 0;
-                while (File.Exists(dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + extension))
+                while (File.Exists(Path.Combine(dirName, fileName + "_" + id.ToString() + "." + extension)))
                 {
                     id++;
                 }
 
                 // Now we have found a unique identifier and create the new name.
-                path = dirName + Path.DirectorySeparatorChar + fileName + "_" + id.ToString() + "." + extension;
+                path = Path.Combine(dirName, fileName + "_" + id.ToString() + "." + extension);
             }
             return path;
         }
