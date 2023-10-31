@@ -48,32 +48,34 @@ namespace EBD
             }
         }
 
-        public static string GenerateUniqueFilename(string dirName, string fileName, string extension)
+        public static string GenerateUniqueFilename(string dirName, string fileName)
         {
             // Create directory if does not exist.
             Directory.CreateDirectory(dirName);
 
             // This is the path the file will be written to.
-            string path = Path.Combine(dirName, fileName + "." + extension);
+            string path = Path.Combine(dirName, fileName);
             
             // Check if specified file exists yet and if user wants to overwrite.
             if (File.Exists(path))
             {
                 /* In this case we need to make the filename unique.
                 * We will achiece that by:
-                * foldername + sep + filename + . + format -> foldername + sep + filename + _x + . format
+                * foldername + filename + extension -> foldername + filename + _x + extension
                 * x will be increased in case of multiple overwrites.
                 */
+                string extension = Path.GetExtension(fileName);
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
                 
                 // Check if there was a previous overwrite and get highest identifier.
                 int id = 0;
-                while (File.Exists(Path.Combine(dirName, fileName + "_" + id.ToString() + "." + extension)))
+                while (File.Exists(Path.Combine(dirName, fileNameWithoutExtension + "_" + id.ToString() + extension)))
                 {
                     id++;
                 }
 
                 // Now we have found a unique identifier and create the new name.
-                path = Path.Combine(dirName, fileName + "_" + id.ToString() + "." + extension);
+                path = Path.Combine(dirName, fileNameWithoutExtension + "_" + id.ToString() + extension);
             }
             return path;
         }
