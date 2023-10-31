@@ -57,8 +57,6 @@ public class AgentScript : MonoBehaviour
     private float lastDisplacement;                 // Last time the agent was displaced.
     private float displacementDelta = 0.1f;         // Length of the vector that the agents needs to have travelled to not be displaced.
     public List<Vector3> trajectory;                // A list of past positions of the agent, constituting the trajectories.
-    private float sampleInterval;                   // Interval that needs to pass until new location gets sampled.
-    private float lastSample;                       // Last time a sample was taken.
     private Vector3 firstPos;                       // First position in simulation.
 
     // State of the agent.
@@ -135,6 +133,7 @@ public class AgentScript : MonoBehaviour
         lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
         lineRenderer.colorGradient = gradient;
         lineRenderer.positionCount = traceLength;
+        lineRenderer.widthMultiplier = 0.5f;
         Vector3[] startArray = new Vector3[traceLength];
         for (int i = 0; i < traceLength; i++) {
             startArray[i] = transform.position;

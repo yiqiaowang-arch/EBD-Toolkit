@@ -73,6 +73,7 @@ crashlytics-build.properties
 
 # Generated data
 Recordings/
+Data
 
 # Geometry
 # *.fbx

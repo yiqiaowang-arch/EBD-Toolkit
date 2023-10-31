@@ -63,10 +63,7 @@ public class EngineScript : MonoBehaviour
     public string fileName;                         // Name of the file where data gets written to.
     public float sampleInterval;                    // Interval which needs to pass until new data is sampled.
     private float lastSample;                       // Last time a sample was taken.
-    private StreamWriter file;                      // Stream that writes data to file.
     private string path;                            // Unique path where file gets saved to.
-    private string testPath;
-    private float latestTime;
 
     // Start is called before the first frame update
     void Start()

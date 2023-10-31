@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using System.Linq;
 using UnityEditor;
+using System.Globalization;
 
 public class CaptureWalkthrough : MonoBehaviour
 {
@@ -23,7 +24,7 @@ public class CaptureWalkthrough : MonoBehaviour
     private List<float> xAngle;                     // Elevation.
     private List<float> time;                       // Time.
     private float lastSample;                       // The time the last sample was taken.  
-    private const char csvSep = ';';  
+    private const string csvSep = ";";  
 
     // Start is called before the first frame update
     void Start()
@@ -88,10 +89,57 @@ public class CaptureWalkthrough : MonoBehaviour
         Debug.Log(Vector3.Distance(gameObject.transform.position, target.transform.position));
         if (Vector3.Distance(gameObject.transform.position, target.transform.position) < targetProximity)
         {
-            Debug.Log("here");
-            WriteRawDataFile();
+            // Prepare data for CSV.
+            (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
+
+            // Write data.
+            CSVWriter.WriteToCSV(fileName, columnNames, data, csvSep);
             EditorApplication.ExitPlaymode();
         }
+    }
+
+    private (List<string>, List<List<string>>) PrepareDataForCSV()
+    {
+        // Generate column names.
+        List<string> columnNames = new List<string>() {
+            "Time",
+            "PositionX",
+            "PositionY",
+            "PositionZ",
+            "DirectionX",
+            "DirectionY",
+            "DirectionZ",
+            "UpX",
+            "UpY",
+            "UpZ",
+            "RightX",
+            "RightY",
+            "RightZ",
+        };
+
+        // Generate data matrix from the lists.
+        List<List<string>> data = new List<List<string>>();
+        for (int i = 0; i < positions.Count; i++)
+        {
+            List<string> row = new List<string>() {
+                times[i].ToString("F3", CultureInfo.InvariantCulture),
+                positions[i].x.ToString("F3", CultureInfo.InvariantCulture),
+                positions[i].y.ToString("F3", CultureInfo.InvariantCulture),
+                positions[i].z.ToString("F3", CultureInfo.InvariantCulture),
+                directions[i].x.ToString("F3", CultureInfo.InvariantCulture),
+                directions[i].y.ToString("F3", CultureInfo.InvariantCulture),
+                directions[i].z.ToString("F3", CultureInfo.InvariantCulture),
+                ups[i].x.ToString("F3", CultureInfo.InvariantCulture),
+                ups[i].y.ToString("F3", CultureInfo.InvariantCulture),
+                ups[i].z.ToString("F3", CultureInfo.InvariantCulture),
+                rights[i].x.ToString("F3", CultureInfo.InvariantCulture),
+                rights[i].y.ToString("F3", CultureInfo.InvariantCulture),
+                rights[i].z.ToString("F3", CultureInfo.InvariantCulture),
+            };
+            data.Add(row);
+        }
+        
+        return (columnNames, data);
     }
 
     private string MakeFileNameUnique(string path)
@@ -117,50 +165,16 @@ public class CaptureWalkthrough : MonoBehaviour
         return pathWithoutFileName + fileNameWithoutExtension + "_" + wildCard.ToString() + extension;
     }
 
-    public void WriteRawDataFile()
-    {
-        using (StreamWriter openFile = new StreamWriter(fileName)) 
-        {
-            for (int i = 0; i < positions.Count; i++) {
-
-                // Write out time.
-                string line = times[i].ToString("F3") + csvSep;
-
-                // Write out coordinates of position.
-                Vector3 currPos = positions[i];
-                line += currPos.x.ToString("F3") + csvSep;
-                line += currPos.y.ToString("F3") + csvSep;
-                line += currPos.z.ToString("F3") + csvSep;
-
-                // Write out coordinates of forward direction.
-                Vector3 currDir = directions[i];
-                line += currDir.x.ToString("F3") + csvSep;
-                line += currDir.y.ToString("F3") + csvSep;
-                line += currDir.z.ToString("F3") + csvSep;
-
-                // Write out coordinates of up direction.
-                Vector3 currUp = ups[i];
-                line += currUp.x.ToString("F3") + csvSep;
-                line += currUp.y.ToString("F3") + csvSep;
-                line += currUp.z.ToString("F3") + csvSep;
-
-                // Write out coordinates of right direction.
-                Vector3 currRight = rights[i];
-                line += currRight.x.ToString("F3") + csvSep;
-                line += currRight.y.ToString("F3") + csvSep;
-                line += currRight.z.ToString("F3");
-
-                openFile.WriteLine(line);
-            }
-        }
-    }
-
     // Need to define this as well in case the trial is ended before the player can reach the end.
     void OnDestroy()
     {
         if (this.enabled)
         {
-            WriteRawDataFile();
+            // Prepare data for CSV.
+            (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
+
+            // Write data.
+            CSVWriter.WriteToCSV(fileName, columnNames, data, csvSep);
         }
     }
 }
