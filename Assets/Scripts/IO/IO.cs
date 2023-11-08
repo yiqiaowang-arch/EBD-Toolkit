@@ -35,7 +35,7 @@ namespace EBD
                 }
             }
 
-            using StreamWriter writer = new StreamWriter(filePath);
+            using StreamWriter writer = new(filePath);
             // Write the column names.
             writer.WriteLine(string.Join(separator, columnNames.ToArray()));
 
@@ -44,6 +44,32 @@ namespace EBD
             {
                 writer.WriteLine(string.Join(separator, line.ToArray()));
             }
+        }
+
+        /// <summary>
+        /// Reads from a CSV file.
+        /// </summary>
+        /// <param name="filePath">Path of the file.</param>
+        /// <param name="separator">Separator used.</param>
+        /// <returns>List of strings corresponding to column names and list of list of strings where each inner list
+        /// corresponds to a row.</returns>
+        public static (List<string>, List<List<string>>) ReadFromCSV(string filePath, string separator = ";")
+        {
+            List<string> columnNames = new();
+            List<List<string>> data = new();
+
+            using StreamReader reader = new(filePath);
+            // Read the column names.
+            string line = reader.ReadLine();
+            columnNames.AddRange(line.Split(separator));
+
+            // Read the data.
+            while ((line = reader.ReadLine()) != null)
+            {
+                data.Add(new List<string>(line.Split(separator)));
+            }
+
+            return (columnNames, data);
         }
 
         public static string GenerateUniqueFilename(string dirName, string fileName)

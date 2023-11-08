@@ -21,6 +21,8 @@ using UnityEngine;
 using System.IO;
 using UnityEngine.AI;
 using System.Linq;
+using EBD;
+using System.Globalization;
 
 public class ProcessWalkthrough : MonoBehaviour
 {
@@ -128,12 +130,41 @@ public class ProcessWalkthrough : MonoBehaviour
         // Parse each file and populate the positions and direction arrays.
         foreach (string fileName in rawDataFileNames)
         {
-            (float[], Vector3[], Vector3[], Vector3[], Vector3[]) parsedData = ReadRawDataFile(fileName);
-            trajectoryTimes.Add(parsedData.Item1);
-            trajectoryPositions.Add(parsedData.Item2);
-            trajectoryForwardDirections.Add(parsedData.Item3);
-            trajectoryUpDirections.Add(parsedData.Item4);
-            trajectoryRightDirections.Add(parsedData.Item5);
+            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName);
+            List<float> times = new();
+            List<Vector3> positions = new();
+            List<Vector3> forwardDirections = new();
+            List<Vector3> upDirections = new();
+            List<Vector3> rightDirections = new();
+            foreach (List<string> row in data)
+            {
+                times.Add(float.Parse(row[columnNames.IndexOf("Time")], CultureInfo.InvariantCulture));
+                positions.Add(new Vector3(
+                    float.Parse(row[columnNames.IndexOf("PositionX")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("PositionY")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("PositionZ")], CultureInfo.InvariantCulture)
+                ));
+                forwardDirections.Add(new Vector3(
+                    float.Parse(row[columnNames.IndexOf("DirectionX")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("DirectionY")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("DirectionZ")], CultureInfo.InvariantCulture)
+                ));
+                upDirections.Add(new Vector3(
+                    float.Parse(row[columnNames.IndexOf("UpX")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("UpY")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("UpZ")], CultureInfo.InvariantCulture)
+                ));
+                rightDirections.Add(new Vector3(
+                    float.Parse(row[columnNames.IndexOf("RightX")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("RightY")], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf("RightZ")], CultureInfo.InvariantCulture)
+                ));
+            }
+            trajectoryTimes.Add(times.ToArray());
+            trajectoryPositions.Add(positions.ToArray());
+            trajectoryForwardDirections.Add(forwardDirections.ToArray());
+            trajectoryUpDirections.Add(upDirections.ToArray());
+            trajectoryRightDirections.Add(rightDirections.ToArray());
         }        
 
         if (visualizeHeatmap)
