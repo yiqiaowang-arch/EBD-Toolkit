@@ -220,20 +220,7 @@ public class ProcessWalkthrough : MonoBehaviour
             WriteSummarizedDataFile();
         }
     }
-
-    /* Converts string-representation of vector (in format of Vector3.ToString()) to Vector3.
-     * @param str       string representation of vector.
-     * @out             Vector3 representation of input string.
-     */
-    Vector3 str2Vec(string str)
-    {
-        str = str.Substring(1, str.Length - 2);
-        string[] substrs = str.Split(csvSep);
-        return new Vector3( float.Parse(substrs[0]), 
-                            float.Parse(substrs[1]), 
-                            float.Parse(substrs[2]));
-    }
-
+    
     void Update()
     {
         if (visualizeTrajectory)
@@ -471,7 +458,6 @@ public class ProcessWalkthrough : MonoBehaviour
             int totalHits = 0;
             for (int j = 0; j < currHitsPerLayer.Length; j++)
             {
-                Debug.Log(currHitsPerLayer[j]);
                 totalHits += currHitsPerLayer[j];
             }
 
