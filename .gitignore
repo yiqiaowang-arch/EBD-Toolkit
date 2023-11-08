@@ -74,6 +74,10 @@ crashlytics-build.properties
 # Generated data
 Recordings/
 Data
+Data_VR
+Data_ABM
+Data_VR_Processed
+Data_VR_Summarized
 
 # Geometry
 # *.fbx

@@ -35,16 +35,14 @@ namespace EBD
                 }
             }
 
-            using (StreamWriter writer = new StreamWriter(filePath))
-            {
-                // Write the column names.
-                writer.WriteLine(string.Join(separator, columnNames.ToArray()));
+            using StreamWriter writer = new StreamWriter(filePath);
+            // Write the column names.
+            writer.WriteLine(string.Join(separator, columnNames.ToArray()));
 
-                // Write the data.
-                foreach (List<string> line in data)
-                {
-                    writer.WriteLine(string.Join(separator, line.ToArray()));
-                }
+            // Write the data.
+            foreach (List<string> line in data)
+            {
+                writer.WriteLine(string.Join(separator, line.ToArray()));
             }
         }
 

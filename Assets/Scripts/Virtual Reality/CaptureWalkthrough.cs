@@ -86,7 +86,7 @@ public class CaptureWalkthrough : MonoBehaviour
             xAngle.Add(view.transform.rotation.eulerAngles.x);
             time.Add(currTime);
         }
-        Debug.Log(Vector3.Distance(gameObject.transform.position, target.transform.position));
+
         if (Vector3.Distance(gameObject.transform.position, target.transform.position) < targetProximity)
         {
             // Prepare data for CSV.
@@ -101,7 +101,7 @@ public class CaptureWalkthrough : MonoBehaviour
     private (List<string>, List<List<string>>) PrepareDataForCSV()
     {
         // Generate column names.
-        List<string> columnNames = new List<string>() {
+        List<string> columnNames = new() {
             "Time",
             "PositionX",
             "PositionY",
