@@ -148,12 +148,15 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName);
 
+            // Check that all required columns are present.
+            CheckColumns(columnNames);
+
             // Key is the trial name.
             foreach (List<string> row in data)
             {
                 ParseRow(
                     row,
-                    fileName, // This will be overwritten by participant id if `multipleTrialsInOneFile` is true.
+                    Path.GetFileName(fileName), // This will be overwritten by participant id if `multipleTrialsInOneFile` is true.
                     ref trajectoryTimes,
                     ref trajectoryPositions,
                     ref trajectoryForwardDirections,
@@ -219,6 +222,7 @@ public class ProcessWalkthrough : MonoBehaviour
                     // Create shortest path.
                     NavMeshPath navMeshPath = new NavMeshPath();
                     NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
+                    /*
                     Visualization.RenderTrajectory(
                         lineRenderer: shortestPathLinerenderer,
                         positions: navMeshPath.corners.ToList(),
@@ -228,6 +232,7 @@ public class ProcessWalkthrough : MonoBehaviour
                         trajectoryWidth: pathWidth,
                         normalizeTime: true
                     );
+                    */
                 }
             }
         }
@@ -358,49 +363,33 @@ public class ProcessWalkthrough : MonoBehaviour
     private void WriteSummarizedDataFile()
     {
 
-        // Variables to be written out.
-        List<float> durations = new List<float>();
-        List<float> distances = new List<float>();
-        List<float> averageSpeeds = new List<float>();
-        List<float> shortestPathDistances = new List<float>();
-        List<float> surplusShortestPaths = new List<float>();
-        List<float> ratioShortestPaths = new List<float>();
-        List<int> successfuls = new List<int>();
-        List<List<float>> viewPercentages = new List<List<float>>();
+        // Variables to be written out. One entry per trial id (or file name).
+        Dictionary<string, float> durations = new();
+        Dictionary<string, float> distances = new();
+        Dictionary<string, float> averageSpeeds = new();
+        Dictionary<string, float> shortestPathDistances = new();
+        Dictionary<string, float> surplusShortestPaths = new();
+        Dictionary<string, float> ratioShortestPaths = new();
+        Dictionary<string, int> successfuls = new();
+        Dictionary<string, List<float>> viewPercentages = new();
 
-        for (int i = 0; i < numFiles; i++)
+        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
         {
             // Duration of a walkthrough is the temporal difference between the last update step and the first.
-            durations.Add(trajectoryTimes[i][trajectoryTimes[i].Length - 1] - trajectoryTimes[i][0]);
-            Debug.Log($"Adding time: {trajectoryTimes[i][trajectoryTimes[i].Length - 1] - trajectoryTimes[i][0]}");
-        }
+            durations.Add(entry.Key, trajectoryTimes[entry.Key][trajectoryTimes[entry.Key].Count - 1] - trajectoryTimes[entry.Key][0]);
 
-        // Distances of user trajectory.
-        for (int i = 0; i < numFiles; i++)
-        {
             // Add up distances between measures time-points. Note that the resolution at which the time-points are 
             // recorded will make a difference.
             float currDistance = 0.0f;
-            for (int j = 0; j < trajectoryPositions[i].Length - 1; j++)
+            for (int j = 0; j < trajectoryPositions[entry.Key].Count - 1; j++)
             {
-                currDistance += Vector3.Distance(trajectoryPositions[i][j], trajectoryPositions[i][j + 1]);
+                currDistance += Vector3.Distance(trajectoryPositions[entry.Key][j], trajectoryPositions[entry.Key][j + 1]);
             }
-            distances.Add(currDistance);
-            Debug.Log($"Adding distance: {currDistance}");
-        }
+            distances.Add(entry.Key, currDistance);
 
-        // Average speeds.
-        for (int i = 0; i < numFiles; i++)
-        {
-            averageSpeeds.Add(distances[i] / durations[i]);
-            Debug.Log($"Average speed: {distances[i] / durations[i]}");
-        }
+            averageSpeeds.Add(entry.Key, distances[entry.Key] / durations[entry.Key]);
 
-        // Shortest path distances.
-        for (int i = 0; i < numFiles; i++)
-        {
-            Vector3[] currPositions = trajectoryPositions[i];
-            Vector3 startPos = inferStartLocation ? currPositions[0] : startLocation.position;
+            Vector3 startPos = inferStartLocation ? entry.Value[0] : startLocation.position;
             Vector3 endPos = endLocation.position;
 
             // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
@@ -413,63 +402,30 @@ public class ProcessWalkthrough : MonoBehaviour
             NavMeshPath navMeshPath = new NavMeshPath();
             NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
 
-            float currDistance = 0.0f;
+            float currShortestPathDistance = 0.0f;
             for (int j = 0; j < navMeshPath.corners.Length - 1; j++)
             {
-                currDistance += Vector3.Distance(navMeshPath.corners[j], navMeshPath.corners[j + 1]);
+                currShortestPathDistance += Vector3.Distance(navMeshPath.corners[j], navMeshPath.corners[j + 1]);
             }
 
-            shortestPathDistances.Add(currDistance);
-        }
+            shortestPathDistances.Add(entry.Key, currShortestPathDistance);
 
-        // Surplus distance to shortest path.
-        for (int i = 0; i < numFiles; i++)
-        {
-            surplusShortestPaths.Add(distances[i] - shortestPathDistances[i]);
-        }
+            surplusShortestPaths.Add(entry.Key, distances[entry.Key] - shortestPathDistances[entry.Key]);
 
+            ratioShortestPaths.Add(entry.Key, distances[entry.Key] / shortestPathDistances[entry.Key]);
 
-        // Ratio between user trajectory length and shortest path.
-        for (int i = 0; i < numFiles; i++)
-        {
-            ratioShortestPaths.Add(distances[i] / shortestPathDistances[i]);
-        }
-
-        // Whether the run was successful.
-        for (int i = 0; i < numFiles; i++)
-        {
-            if (Vector3.Distance(trajectoryPositions[i][trajectoryPositions[i].Length - 1], endLocation.position) < 2.0f)
+            if (Vector3.Distance(trajectoryPositions[entry.Key][trajectoryPositions[entry.Key].Count - 1], endLocation.position) < 2.0f)
             {
-                successfuls.Add(1);
+                successfuls.Add(entry.Key, 1);
             }
             else
             {
-                successfuls.Add(0);
+                successfuls.Add(entry.Key, 0);
             }
-        }
-
-        // Percentages of visibility.
-        for (int i = 0; i < numFiles; i++)
-        {
-            int[] currHitsPerLayer = hitsPerLayer[i];
-
-            // Determine the total number of hits.
-            int totalHits = 0;
-            for (int j = 0; j < currHitsPerLayer.Length; j++)
-            {
-                totalHits += currHitsPerLayer[j];
-            }
-
-            List<float> currHitPercentages = new List<float>();
-            for (int j = 0; j < currHitsPerLayer.Length; j++)
-            {
-                currHitPercentages.Add((float)currHitsPerLayer[j] / totalHits);
-            }
-            viewPercentages.Add(currHitPercentages);
         }
 
         List<string> columnNames = new() {
-                "RawDataFileName",
+                "TrialID",
                 "Duration",
                 "Distance",
                 "AverageSpeed",
@@ -484,21 +440,21 @@ public class ProcessWalkthrough : MonoBehaviour
         }
 
         List<List<string>> data = new();
-        for (int i = 0; i < numFiles; i++)
+        foreach (KeyValuePair<string, float> entry in durations)
         {
             List<string> row = new() {
-                    Path.GetFileNameWithoutExtension(rawDataFileNames[i]),
-                    durations[i].ToString(prec, CultureInfo.InvariantCulture),
-                    distances[i].ToString(prec, CultureInfo.InvariantCulture),
-                    averageSpeeds[i].ToString(prec, CultureInfo.InvariantCulture),
-                    shortestPathDistances[i].ToString(prec, CultureInfo.InvariantCulture),
-                    surplusShortestPaths[i].ToString(prec, CultureInfo.InvariantCulture),
-                    ratioShortestPaths[i].ToString(prec, CultureInfo.InvariantCulture),
-                    successfuls[i].ToString(prec, CultureInfo.InvariantCulture)
+                    entry.Key,
+                    durations[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    distances[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    averageSpeeds[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    shortestPathDistances[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    surplusShortestPaths[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    ratioShortestPaths[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
+                    successfuls[entry.Key].ToString(prec, CultureInfo.InvariantCulture)
                 };
-            for (int j = 0; j < viewPercentages[i].Count; j++)
+            for (int j = 0; j < hitsPerLayer[0].Length; j++)
             {
-                row.Add(viewPercentages[i][j].ToString(prec));
+                row.Add(hitsPerLayer[0][j].ToString(prec, CultureInfo.InvariantCulture));
             }
             data.Add(row);
         }
@@ -563,6 +519,53 @@ public class ProcessWalkthrough : MonoBehaviour
                 float.Parse(row[columnNames.IndexOf(rightYColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(rightZColumnName)], CultureInfo.InvariantCulture)
             ));
+        }
+    }
+
+    private void CheckColumns(List<string> columns)
+    {
+        List<string> requiredColumns = new() {
+            positionXColumnName,
+            positionYColumnName,
+            positionZColumnName,
+            timeColumnName,
+        };
+
+        if (useQuaternion)
+        {
+            requiredColumns.AddRange(new List<string> {
+                quaternionWColumnName,
+                quaternionXColumnName,
+                quaternionYColumnName,
+                quaternionZColumnName
+            });
+        }
+        else
+        {
+            requiredColumns.AddRange(new List<string> {
+                directionXColumnName,
+                directionYColumnName,
+                directionZColumnName,
+                upXColumnName,
+                upYColumnName,
+                upZColumnName,
+                rightXColumnName,
+                rightYColumnName,
+                rightZColumnName
+            });
+        }
+
+        if (multipleTrialsInOneFile)
+        {
+            requiredColumns.Add(trialColumnName);
+        }
+
+        foreach (string requiredColumn in requiredColumns)
+        {
+            if (!columns.Contains(requiredColumn))
+            {
+                throw new System.Exception("Column " + requiredColumn + " not found in data file.");
+            }
         }
     }
 }

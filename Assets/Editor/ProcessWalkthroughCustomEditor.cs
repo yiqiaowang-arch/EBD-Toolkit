@@ -15,7 +15,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     private void OnEnable()
     {
-        processor = (ProcessWalkthrough) target;
+        processor = (ProcessWalkthrough)target;
         visualizeTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeTrajectory);
         visualizeHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeHeatmap);
         visualizeShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
@@ -47,7 +47,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         if (GUILayout.Button("Choose raw data directory", GUILayout.Width(buttonWidth)))
         {
             string newRawDirectoryName = EditorUtility.OpenFolderPanel("Choose directory containing raw data", "RawData", "Default");
-            
+
             // Only apply changes if the user has actually chosen a new directory (the returned name is not the empty
             // string) and if the new directory is not the same as the old one.
             if (newRawDirectoryName != "" && newRawDirectoryName != processor.rawDataDirectory)
@@ -107,21 +107,21 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         // If not all files are chosen, a specific file need to be indicated.
         EditorGUI.BeginDisabledGroup(processor.useAllFilesInDirectory);
-            if (GUILayout.Button("Choose raw data file", GUILayout.Width(buttonWidth))) 
+        if (GUILayout.Button("Choose raw data file", GUILayout.Width(buttonWidth)))
+        {
+            string newRawDatafileName = EditorUtility.OpenFilePanel("Choose raw data file", processor.rawDataDirectory, "csv");
+            if (newRawDatafileName == "")
             {
-                string newRawDatafileName = EditorUtility.OpenFilePanel("Choose raw data file", processor.rawDataDirectory, "csv");
-                if (newRawDatafileName == "")
-                {
-                    // The user has aborted the file-selection process. Revert to old file name.
-                    newRawDatafileName = processor.rawDataFileName;
-                }
-                processor.rawDataFileName = newRawDatafileName;
-                Directory.CreateDirectory("Data_VR_Processed");
-                Directory.CreateDirectory("Data_VR_Summarized");
-                processor.outProcessedDataFileName = "Data_VR_Processed/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
-                processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
+                // The user has aborted the file-selection process. Revert to old file name.
+                newRawDatafileName = processor.rawDataFileName;
             }
-            GUILayout.Label(Path.GetFileName(processor.rawDataFileName));
+            processor.rawDataFileName = newRawDatafileName;
+            Directory.CreateDirectory("Data_VR_Processed");
+            Directory.CreateDirectory("Data_VR_Summarized");
+            processor.outProcessedDataFileName = "Data_VR_Processed/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "processed");
+            processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
+        }
+        GUILayout.Label(Path.GetFileName(processor.rawDataFileName));
         EditorGUI.EndDisabledGroup();
         GUILayout.EndHorizontal();
 
@@ -140,7 +140,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         if (GUILayout.Button("Delete file", GUILayout.Width(buttonWidth)))
         {
             string fileNameToDelete = EditorUtility.OpenFilePanel("Delete file", "RawData", "csv");
-            
+
             if (fileNameToDelete != "")
             {
                 FileUtil.DeleteFileOrDirectory(fileNameToDelete);
@@ -178,7 +178,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         }
         EditorGUILayout.EndFadeGroup();
         processor.multipleTrialsInOneFile = EditorGUILayout.Toggle("Multiple Trials in One File", processor.multipleTrialsInOneFile);
-        EditorGUI.BeginDisabledGroup(processor.multipleTrialsInOneFile);
+        EditorGUI.BeginDisabledGroup(!processor.multipleTrialsInOneFile);
         {
             processor.trialColumnName = EditorGUILayout.TextField("Trial", processor.trialColumnName);
         }
@@ -208,20 +208,20 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.indentLevel += 2;
             processor.reuseHeatmap = EditorGUILayout.ToggleLeft("Use processed data file", processor.reuseHeatmap);
             EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
-                processor.raysPerRaycast = EditorGUILayout.IntSlider("Rays per Raycast", processor.raysPerRaycast, 1, 200);
-                processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
-                processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
+            processor.raysPerRaycast = EditorGUILayout.IntSlider("Rays per Raycast", processor.raysPerRaycast, 1, 200);
+            processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
+            processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
 
-                EditorGUI.BeginChangeCheck();
-                SerializedObject serializedHeatmapGradient = new SerializedObject(target);
-                SerializedProperty heatmapGradient = serializedHeatmapGradient.FindProperty("heatmapGradient");
-                EditorGUILayout.PropertyField(heatmapGradient, true);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    serializedHeatmapGradient.ApplyModifiedProperties();
-                }
-                LayerMask newMask = EditorGUILayout.MaskField("Heatmap Layers", InternalEditorUtility.LayerMaskToConcatenatedLayersMask(processor.layerMask), InternalEditorUtility.layers);
-                processor.layerMask = InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(newMask);
+            EditorGUI.BeginChangeCheck();
+            SerializedObject serializedHeatmapGradient = new SerializedObject(target);
+            SerializedProperty heatmapGradient = serializedHeatmapGradient.FindProperty("heatmapGradient");
+            EditorGUILayout.PropertyField(heatmapGradient, true);
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedHeatmapGradient.ApplyModifiedProperties();
+            }
+            LayerMask newMask = EditorGUILayout.MaskField("Heatmap Layers", InternalEditorUtility.LayerMaskToConcatenatedLayersMask(processor.layerMask), InternalEditorUtility.layers);
+            processor.layerMask = InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(newMask);
             EditorGUI.EndDisabledGroup();
             processor.heatmapMaterial = EditorGUILayout.ObjectField("Heatmap Material", processor.heatmapMaterial, typeof(Material), true) as Material;
             EditorGUI.indentLevel -= 2;
@@ -274,13 +274,13 @@ public class ProcessWalkthroughCustomEditor : Editor
 
                 // Should the start location of the shortest path inferred automatically ot chosen manually.
                 processor.inferStartLocation = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Infer start location", "Check this if you want the script to automatically infer where the agent has started."), 
+                    new GUIContent("Infer start location", "Check this if you want the script to automatically infer where the agent has started."),
                     processor.inferStartLocation
                 );
                 EditorGUI.BeginDisabledGroup(processor.inferStartLocation);
                 {
                     processor.startLocation = EditorGUILayout.ObjectField(
-                        new GUIContent("Start", "The gameobject that corresponds to the start"), 
+                        new GUIContent("Start", "The gameobject that corresponds to the start"),
                         processor.startLocation, typeof(Transform), true
                     ) as Transform;
                 }
@@ -288,7 +288,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
                 // Setting the endlocation.
                 processor.endLocation = EditorGUILayout.ObjectField(
-                    new GUIContent("Target", "The gameobject that corresponds to the target"), 
+                    new GUIContent("Target", "The gameobject that corresponds to the target"),
                     processor.endLocation, typeof(Transform), true
                 ) as Transform;
 
@@ -320,10 +320,10 @@ public class ProcessWalkthroughCustomEditor : Editor
         HorizontalSeperator();
 
         EditorGUILayout.Space();
-        
+
         EditorGUI.BeginDisabledGroup(!processor.visualizeHeatmap);
         processor.generateSummarizedDataFile = EditorGUILayout.Toggle(
-            new GUIContent("Generate Summary", "Enable \"Visualize Heatmap\" to generate summary"), 
+            new GUIContent("Generate Summary", "Enable \"Visualize Heatmap\" to generate summary"),
             processor.generateSummarizedDataFile
         );
         EditorGUI.EndDisabledGroup();
