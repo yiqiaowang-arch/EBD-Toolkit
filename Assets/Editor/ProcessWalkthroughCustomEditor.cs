@@ -198,7 +198,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
             // Gradient of the trajectory.
             EditorGUI.BeginChangeCheck();
-            SerializedObject serializedGradient = new SerializedObject(target);
+            SerializedObject serializedGradient = new(target);
             SerializedProperty colorGradient = serializedGradient.FindProperty("trajectoryGradient");
             EditorGUILayout.PropertyField(colorGradient, true);
             if (EditorGUI.EndChangeCheck())
@@ -211,6 +211,18 @@ public class ProcessWalkthroughCustomEditor : Editor
 
             // Material of the line renderer.
             processor.lineRendererMaterial = EditorGUILayout.ObjectField("Trajectory Material", processor.lineRendererMaterial, typeof(Material), true) as Material;
+
+            // Set showTrajectoryProgressively field.
+            processor.showTrajectoryProgressively = EditorGUILayout.ToggleLeft("Show trajectory progressively", processor.showTrajectoryProgressively);
+
+            EditorGUI.indentLevel += 2;
+            EditorGUI.BeginDisabledGroup(!processor.showTrajectoryProgressively);
+            {
+                // Set trajectoryProgressionSpeed field.
+                processor.replayDuration = EditorGUILayout.Slider("Replay speed", processor.replayDuration, 0.01f, 60.0f);
+            }
+            EditorGUI.EndDisabledGroup();
+            EditorGUI.indentLevel -= 2;
 
             // Should shortest path be visualized?
             processor.visualizeShortestPath = EditorGUILayout.ToggleLeft("Visualize Shortest Path", processor.visualizeShortestPath);
