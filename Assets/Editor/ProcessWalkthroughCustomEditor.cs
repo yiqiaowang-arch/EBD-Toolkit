@@ -9,6 +9,7 @@ public class ProcessWalkthroughCustomEditor : Editor
     UnityEditor.AnimatedValues.AnimBool visualizeTrajectoryAnimBool;
     UnityEditor.AnimatedValues.AnimBool visualizeHeatmapAnimBool;
     UnityEditor.AnimatedValues.AnimBool visualizeShortestPathBool;
+    UnityEditor.AnimatedValues.AnimBool useQuaternionAnimBool;
     ProcessWalkthrough processor;
     readonly int buttonWidth = 210;
 
@@ -18,6 +19,8 @@ public class ProcessWalkthroughCustomEditor : Editor
         visualizeTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeTrajectory);
         visualizeHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeHeatmap);
         visualizeShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
+        useQuaternionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.useQuaternion);
+        useQuaternionAnimBool.valueChanged.AddListener(Repaint);
     }
     public override void OnInspectorGUI()
     {
@@ -34,7 +37,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         EditorGUILayout.Space();
 
-        GUILayout.Label("File Input and Output", EditorStyles.boldLabel);
+        GUILayout.Label("File Input/Output", EditorStyles.boldLabel);
 
         EditorGUILayout.Space();
 
@@ -119,8 +122,8 @@ public class ProcessWalkthroughCustomEditor : Editor
                 processor.outSummarizedDataFileName = "Data_VR_Summarized/" + processor.CreateDerivedDataFileName(processor.rawDataDirectory, processor.rawDataFileName, "summarized");
             }
             GUILayout.Label(Path.GetFileName(processor.rawDataFileName));
-            GUILayout.EndHorizontal();
         EditorGUI.EndDisabledGroup();
+        GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
 
@@ -143,6 +146,44 @@ public class ProcessWalkthroughCustomEditor : Editor
                 FileUtil.DeleteFileOrDirectory(fileNameToDelete);
             }
         }
+
+        GUILayout.Label("Column Names", EditorStyles.boldLabel);
+        EditorGUI.indentLevel += 2;
+        processor.timeColumnName = EditorGUILayout.TextField("Time", processor.timeColumnName);
+        processor.positionXColumnName = EditorGUILayout.TextField("Position X", processor.positionXColumnName);
+        processor.positionYColumnName = EditorGUILayout.TextField("Position Y", processor.positionYColumnName);
+        processor.positionZColumnName = EditorGUILayout.TextField("Position Z", processor.positionZColumnName);
+        processor.useQuaternion = EditorGUILayout.Toggle("Use Quaternion", processor.useQuaternion);
+        useQuaternionAnimBool.target = processor.useQuaternion;
+        if (EditorGUILayout.BeginFadeGroup(useQuaternionAnimBool.faded))
+        {
+            processor.quaternionWColumnName = EditorGUILayout.TextField("Rotation X", processor.quaternionWColumnName);
+            processor.quaternionXColumnName = EditorGUILayout.TextField("Rotation Y", processor.quaternionXColumnName);
+            processor.quaternionYColumnName = EditorGUILayout.TextField("Rotation Z", processor.quaternionYColumnName);
+            processor.quaternionZColumnName = EditorGUILayout.TextField("Rotation W", processor.quaternionZColumnName);
+        }
+        EditorGUILayout.EndFadeGroup();
+
+        if (EditorGUILayout.BeginFadeGroup(1.0f - useQuaternionAnimBool.faded))
+        {
+            processor.directionXColumnName = EditorGUILayout.TextField("Direction X", processor.directionXColumnName);
+            processor.directionYColumnName = EditorGUILayout.TextField("Direction Y", processor.directionYColumnName);
+            processor.directionZColumnName = EditorGUILayout.TextField("Direction Z", processor.directionZColumnName);
+            processor.upXColumnName = EditorGUILayout.TextField("Up X", processor.upXColumnName);
+            processor.upYColumnName = EditorGUILayout.TextField("Up Y", processor.upYColumnName);
+            processor.upZColumnName = EditorGUILayout.TextField("Up Z", processor.upZColumnName);
+            processor.rightXColumnName = EditorGUILayout.TextField("Right X", processor.rightXColumnName);
+            processor.rightYColumnName = EditorGUILayout.TextField("Right Y", processor.rightYColumnName);
+            processor.rightZColumnName = EditorGUILayout.TextField("Right Z", processor.rightZColumnName);
+        }
+        EditorGUILayout.EndFadeGroup();
+        processor.multipleTrialsInOneFile = EditorGUILayout.Toggle("Multiple Trials in One File", processor.multipleTrialsInOneFile);
+        EditorGUI.BeginDisabledGroup(processor.multipleTrialsInOneFile);
+        {
+            processor.trialColumnName = EditorGUILayout.TextField("Trial", processor.trialColumnName);
+        }
+        EditorGUI.EndDisabledGroup();
+        EditorGUI.indentLevel -= 2;
 
         EditorGUILayout.Space();
 

@@ -91,7 +91,26 @@ public class ProcessWalkthrough : MonoBehaviour
     private string prec = "F3";
     public bool showTrajectoryProgressively = false;
     public float replayDuration = 10.0f;
-
+    public bool useQuaternion = false;
+    public string positionXColumnName = "PositionX";
+    public string positionYColumnName = "PositionY";
+    public string positionZColumnName = "PositionZ";
+    public string directionXColumnName = "DirectionX";
+    public string directionYColumnName = "DirectionY";
+    public string directionZColumnName = "DirectionZ";
+    public string upXColumnName = "UpX";
+    public string upYColumnName = "UpY";
+    public string upZColumnName = "UpZ";
+    public string rightXColumnName = "RightX";
+    public string rightYColumnName = "RightY";
+    public string rightZColumnName = "RightZ";
+    public string timeColumnName = "Time";
+    public string quaternionWColumnName = "QuaternionW";
+    public string quaternionXColumnName = "QuaternionX";
+    public string quaternionYColumnName = "QuaternionY";
+    public string quaternionZColumnName = "QuaternionZ";
+    public bool multipleTrialsInOneFile = false;
+    public string trialColumnName = "Trial";
     void Start()
     {
         if (lineRendererMaterial == null)
@@ -133,34 +152,56 @@ public class ProcessWalkthrough : MonoBehaviour
         foreach (string fileName in rawDataFileNames)
         {
             (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName);
-            List<float> times = new();
-            List<Vector3> positions = new();
-            List<Vector3> forwardDirections = new();
-            List<Vector3> upDirections = new();
-            List<Vector3> rightDirections = new();
+
+            // Key is the trial name.
+            Dictionary<string, List<float>> times = new();
+            Dictionary<string, List<Vector3>> positions = new();
+            Dictionary<string, List<Vector3>> forwardDirections = new();
+            Dictionary<string, List<Vector3>> upDirections = new();
+            Dictionary<string, List<Vector3>> rightDirections = new();
             foreach (List<string> row in data)
             {
-                times.Add(float.Parse(row[columnNames.IndexOf("Time")], CultureInfo.InvariantCulture));
+                string strialName = "default";
+                if (multipleTrialsInOneFile)
+                {
+                    strialName = row[columnNames.IndexOf(trialColumnName)];
+                }
+                times.Add(float.Parse(row[columnNames.IndexOf(timeColumnName)], CultureInfo.InvariantCulture));
                 positions.Add(new Vector3(
-                    float.Parse(row[columnNames.IndexOf("PositionX")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("PositionY")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("PositionZ")], CultureInfo.InvariantCulture)
+                    float.Parse(row[columnNames.IndexOf(positionXColumnName)], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf(positionYColumnName)], CultureInfo.InvariantCulture),
+                    float.Parse(row[columnNames.IndexOf(positionZColumnName)], CultureInfo.InvariantCulture)
                 ));
-                forwardDirections.Add(new Vector3(
-                    float.Parse(row[columnNames.IndexOf("DirectionX")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("DirectionY")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("DirectionZ")], CultureInfo.InvariantCulture)
-                ));
-                upDirections.Add(new Vector3(
-                    float.Parse(row[columnNames.IndexOf("UpX")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("UpY")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("UpZ")], CultureInfo.InvariantCulture)
-                ));
-                rightDirections.Add(new Vector3(
-                    float.Parse(row[columnNames.IndexOf("RightX")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("RightY")], CultureInfo.InvariantCulture),
-                    float.Parse(row[columnNames.IndexOf("RightZ")], CultureInfo.InvariantCulture)
-                ));
+                if (useQuaternion)
+                {
+                    Quaternion currQuaternion = new(
+                        float.Parse(row[columnNames.IndexOf(quaternionWColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(quaternionXColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(quaternionYColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(quaternionZColumnName)], CultureInfo.InvariantCulture)
+                    );
+                    forwardDirections.Add(currQuaternion * Vector3.forward);
+                    upDirections.Add(currQuaternion * Vector3.up);
+                    rightDirections.Add(currQuaternion * Vector3.right);
+                }
+                else
+                {
+                    forwardDirections.Add(new Vector3(
+                        float.Parse(row[columnNames.IndexOf(directionXColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(directionYColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(directionZColumnName)], CultureInfo.InvariantCulture)
+                    ));
+                    upDirections.Add(new Vector3(
+                        float.Parse(row[columnNames.IndexOf(upXColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(upYColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(upZColumnName)], CultureInfo.InvariantCulture)
+                    ));
+                    rightDirections.Add(new Vector3(
+                        float.Parse(row[columnNames.IndexOf(rightXColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(rightYColumnName)], CultureInfo.InvariantCulture),
+                        float.Parse(row[columnNames.IndexOf(rightZColumnName)], CultureInfo.InvariantCulture)
+                    ));
+                }
             }
             trajectoryTimes.Add(times.ToArray());
             trajectoryPositions.Add(positions.ToArray());
