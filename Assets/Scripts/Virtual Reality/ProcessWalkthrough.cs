@@ -50,7 +50,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
     // Visualization-related public variables.
     public float particleSize = 1.0f;
-    public float h = 1.0f;
+    public float kernelSize = 1.0f;
 
     public bool useAllFilesInDirectory = false;
     public string rawDataDirectory = "VR_Data/Default";
@@ -86,9 +86,11 @@ public class ProcessWalkthrough : MonoBehaviour
     public Material lineRendererMaterial;
     public Material heatmapMaterial;
     private List<string> rawDataFileNames;
-    private char csvSep = ';';
+    private string csvSep = ";";
     public bool generateSummarizedDataFile;
     private string prec = "F3";
+    public bool showTrajectoryProgressively = false;
+    public float replayDuration = 10.0f;
 
     void Start()
     {
@@ -183,34 +185,55 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         if (visualizeTrajectory)
         {
-            foreach (Vector3[] currPositions in trajectoryPositions)
+            // foreach (Vector3[] currPositions in trajectoryPositions)
+            for (int i = 0; i < trajectoryPositions.Count; i++)
             {
-                lineRendererParent = new GameObject();
-                lineRendererParent.hideFlags = HideFlags.HideInHierarchy;
+                Vector3[] currPositions = trajectoryPositions[i];
+                float[] currTimes = trajectoryTimes[i];
+                lineRendererParent = new GameObject
+                {
+                    hideFlags = HideFlags.HideInHierarchy
+                };
                 lineRenderer = lineRendererParent.AddComponent<LineRenderer>();
-                VisualizeTrajectory(lineRenderer, new List<Vector3>(currPositions), trajectoryGradient, pathWidth);
+                Visualization.RenderTrajectory(
+                    lineRenderer:lineRenderer,
+                    positions:currPositions.ToList(),
+                    timesteps:currTimes.ToList(),
+                    progress:1.0f,
+                    gradient:trajectoryGradient,
+                    trajectoryWidth:pathWidth,
+                    normalizeTime:true
+                );
                 if (visualizeShortestPath)
                 {
                     Vector3 startPos = inferStartLocation ? currPositions[0] : startLocation.position;
                     Vector3 endPos = endLocation.position;
 
                     // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
-                    NavMeshHit startHit;
-                    NavMesh.SamplePosition(startPos, out startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
+                    NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
                     startPos = startHit.position;
-                    NavMeshHit endHit;
-                    NavMesh.SamplePosition(endPos, out endHit, 100.0f, NavMesh.AllAreas);
+                    NavMesh.SamplePosition(endPos, out NavMeshHit endHit, 100.0f, NavMesh.AllAreas);
                     endPos = endHit.position;
 
                     // Creating linerenderer for shortest path.
-                    shortestPathLinerendererParent = new GameObject();
-                    shortestPathLinerendererParent.hideFlags = HideFlags.HideInHierarchy;
+                    shortestPathLinerendererParent = new GameObject
+                    {
+                        hideFlags = HideFlags.HideInHierarchy
+                    };
                     shortestPathLinerenderer = shortestPathLinerendererParent.AddComponent<LineRenderer>();
 
                     // Create shortest path.
                     NavMeshPath navMeshPath = new NavMeshPath();
                     NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
-                    VisualizeTrajectory(shortestPathLinerenderer, new List<Vector3>(navMeshPath.corners), shortestPathGradient, pathWidth);
+                    Visualization.RenderTrajectory(
+                        lineRenderer:shortestPathLinerenderer,
+                        positions:navMeshPath.corners.ToList(),
+                        timesteps:Enumerable.Range(0, navMeshPath.corners.Length).Select(i => (float) i).ToList(),
+                        progress:1.0f,
+                        gradient:shortestPathGradient,
+                        trajectoryWidth:pathWidth,
+                        normalizeTime:true
+                    );
                 }
             }
         }
@@ -223,11 +246,22 @@ public class ProcessWalkthrough : MonoBehaviour
     
     void Update()
     {
-        if (visualizeTrajectory)
+        if (visualizeTrajectory & showTrajectoryProgressively)
         {
-            /*
-            VisualizeTrajectory(lineRenderer, new List<Vector3>(trajectoryPositions), trajectoryGradient, pathWidth);
-            */
+            for (int i = 0; i < trajectoryPositions.Count; i++)
+            {
+                Vector3[] currPositions = trajectoryPositions[i];
+                float[] currTimes = trajectoryTimes[i];
+                Visualization.RenderTrajectory(
+                    lineRenderer:lineRenderer,
+                    positions:currPositions.ToList(),
+                    timesteps:currTimes.ToList(),
+                    progress:Time.realtimeSinceStartup % replayDuration / replayDuration,
+                    gradient:trajectoryGradient,
+                    trajectoryWidth:pathWidth,
+                    normalizeTime:true
+                );
+            }
         }
     }
 
@@ -240,29 +274,6 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         string[] splitRawDir = rawDataDirectory.Split('/'); 
         return splitRawDir[splitRawDir.Length - 1] + "_" + Path.GetFileNameWithoutExtension(rawDataFileName) + "_" + type + Path.GetExtension(rawDataFileName);
-    }
-
-    private (float[], Vector3[], Vector3[], Vector3[], Vector3[]) ReadRawDataFile(string rawDataFileName)
-    {
-        // Reading in the data from a walkthough.
-        string[] data = File.ReadAllLines(rawDataFileName);
-
-        Vector3[] positions = new Vector3[data.Length];
-        Vector3[] forwardDirections = new Vector3[data.Length];
-        Vector3[] upDirections = new Vector3[data.Length];
-        Vector3[] rightDirections = new Vector3[data.Length];
-        float[] times = new float[data.Length];
-        for (int i = 0; i < data.Length; i++)
-        {
-            // Split string at comma.
-            string[] splitLine = data[i].Split(csvSep);
-            times[i] = float.Parse(splitLine[0]);
-            positions[i] = new Vector3(float.Parse(splitLine[1]), float.Parse(splitLine[2]), float.Parse(splitLine[3]));
-            forwardDirections[i] = new Vector3(float.Parse(splitLine[4]), float.Parse(splitLine[5]), float.Parse(splitLine[6]));
-            upDirections[i] = new Vector3(float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]));
-            rightDirections[i] = new Vector3(float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]));
-        }
-        return (times, positions, forwardDirections, upDirections, rightDirections);
     }
 
     private List<Vector3> ComputeHitPositions(
@@ -325,7 +336,7 @@ public class ProcessWalkthrough : MonoBehaviour
             hitsPerLayer.Add(currHitsPerLayer);
         }
 
-        kdeValues = Visualization.KernelDensityEstimate(hitPositions, h);
+        kdeValues = Visualization.KernelDensityEstimate(hitPositions, kernelSize);
         particlePositions = hitPositions.ToArray();
     }
 
@@ -403,11 +414,9 @@ public class ProcessWalkthrough : MonoBehaviour
             Vector3 endPos = endLocation.position;
 
             // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
-            NavMeshHit startHit;
-            NavMesh.SamplePosition(startPos, out startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
+            NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
             startPos = startHit.position;
-            NavMeshHit endHit;
-            NavMesh.SamplePosition(endPos, out endHit, 100.0f, NavMesh.AllAreas);
+            NavMesh.SamplePosition(endPos, out NavMeshHit endHit, 100.0f, NavMesh.AllAreas);
             endPos = endHit.position;
 
             // Create shortest path.
@@ -469,63 +478,40 @@ public class ProcessWalkthrough : MonoBehaviour
             viewPercentages.Add(currHitPercentages);
         }
 
-
-        bool isHead = true;  // Indicates whether the current line is a header.
-        using (StreamWriter summaryDataFile = new StreamWriter(outSummarizedDataFileName))
+        List<string> columnNames = new() {
+                "RawDataFileName",
+                "Duration",
+                "Distance",
+                "AverageSpeed",
+                "ShortestPathDistance",
+                "SurplusShortestPath",
+                "RatioShortestPath",
+                "Successful"
+            };
+        for (int i = 0; i < hitsPerLayer[0].Length; i++)
         {
-            if (isHead)
-            {
-                // Generate header.
-                string header = "RawDataFileName" + csvSep;
-                header += "Duration" + csvSep;
-                header += "Distance" + csvSep;
-                header += "AverageSpeed" + csvSep;
-                header += "ShortestPathDistance" + csvSep;
-                header += "SurplusShortestPath" + csvSep;
-                header += "RatioShortestPath" + csvSep;
-                header += "Successful" + csvSep;
-
-                // For each layer, generate a header.
-                for (int i = 0; i < hitsPerLayer[0].Length - 1; i++)
-                {
-                    header += LayerMask.LayerToName(i) + csvSep;
-                }
-
-                // Last element should be followed by comma, thus breaking off.
-                header += LayerMask.LayerToName(hitsPerLayer[0].Length - 1);
-                isHead = false;  // Set head to false, such that head will not be generated in the following iterations.
-                summaryDataFile.WriteLine(header);
-            }
-            
-            // Write data for each file.
-            for (int i = 0; i < numFiles; i++)
-            {
-                // Generate normal line.
-                string line = "";
-                line += Path.GetFileNameWithoutExtension(rawDataFileNames[i]) + csvSep;
-                line += durations[i].ToString(prec) + csvSep;
-                line += distances[i].ToString(prec) + csvSep;
-                line += averageSpeeds[i].ToString(prec) + csvSep;
-                line += shortestPathDistances[i].ToString(prec) + csvSep;
-                line += surplusShortestPaths[i].ToString(prec) + csvSep;
-                line += ratioShortestPaths[i].ToString(prec) + csvSep;
-                line += successfuls[i].ToString(prec) + csvSep;
-                for (int j = 0; j < viewPercentages[i].Count - 1; j++)
-                {
-                    line += viewPercentages[i][j].ToString(prec) + csvSep;
-                }
-                line += viewPercentages[i][viewPercentages[i].Count - 1].ToString(prec);
-                summaryDataFile.WriteLine(line);
-            }
+            columnNames.Add(LayerMask.LayerToName(i));
         }
-    }
 
-    private void VisualizeTrajectory(LineRenderer lineRenderer, List<Vector3> positions, Gradient gradient, float trajectoryWidth)
-    {
-        lineRenderer.colorGradient = gradient;
-        lineRenderer.material = lineRendererMaterial;
-        lineRenderer.widthMultiplier = trajectoryWidth;
-        lineRenderer.positionCount = positions.Count;
-        lineRenderer.SetPositions(positions.ToArray());
+        List<List<string>> data = new();
+        for (int i = 0; i < numFiles; i++)
+        {
+            List<string> row = new() {
+                    Path.GetFileNameWithoutExtension(rawDataFileNames[i]),
+                    durations[i].ToString(prec, CultureInfo.InvariantCulture),
+                    distances[i].ToString(prec, CultureInfo.InvariantCulture),
+                    averageSpeeds[i].ToString(prec, CultureInfo.InvariantCulture),
+                    shortestPathDistances[i].ToString(prec, CultureInfo.InvariantCulture),
+                    surplusShortestPaths[i].ToString(prec, CultureInfo.InvariantCulture),
+                    ratioShortestPaths[i].ToString(prec, CultureInfo.InvariantCulture),
+                    successfuls[i].ToString(prec, CultureInfo.InvariantCulture)
+                };
+            for (int j = 0; j < viewPercentages[i].Count; j++)
+            {
+                row.Add(viewPercentages[i][j].ToString(prec));
+            }
+            data.Add(row);
+        }
+        IO.WriteToCSV(outSummarizedDataFileName, columnNames, data, csvSep);
     }
 }

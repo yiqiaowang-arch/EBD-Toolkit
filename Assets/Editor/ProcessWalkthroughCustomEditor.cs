@@ -10,7 +10,7 @@ public class ProcessWalkthroughCustomEditor : Editor
     UnityEditor.AnimatedValues.AnimBool visualizeHeatmapAnimBool;
     UnityEditor.AnimatedValues.AnimBool visualizeShortestPathBool;
     ProcessWalkthrough processor;
-    int buttonWidth = 210;
+    readonly int buttonWidth = 210;
 
     private void OnEnable()
     {
@@ -169,7 +169,7 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
                 processor.raysPerRaycast = EditorGUILayout.IntSlider("Rays per Raycast", processor.raysPerRaycast, 1, 200);
                 processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
-                processor.h = EditorGUILayout.Slider("Smoothness", processor.h, 0.1f, 10.0f);
+                processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
 
                 EditorGUI.BeginChangeCheck();
                 SerializedObject serializedHeatmapGradient = new SerializedObject(target);
