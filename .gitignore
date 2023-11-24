@@ -80,7 +80,7 @@ Data_VR_Processed
 Data_VR_Summarized
 
 # Geometry
-# *.fbx
+*.fbx
 Assets/Geometry/
 
 # VS Code
