@@ -4,7 +4,8 @@ using UnityEngine;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace EBD {
+namespace EBD
+{
     public class Visualization
     {
 
@@ -15,7 +16,8 @@ namespace EBD {
             float progress,
             Gradient gradient,
             float trajectoryWidth,
-            bool normalizeTime = false
+            bool normalizeTime = false,
+            bool normalizePosition = false
         )
         {
             // Normalize time steps.
@@ -29,6 +31,35 @@ namespace EBD {
                     timesteps[i] = (timesteps[i] - min) / new_range;
                 }
             }
+
+            // Normalize positions.
+            if (normalizePosition)
+            {
+                float minX = positions.Min(p => p.x);
+                float maxX = positions.Max(p => p.x);
+                float minY = positions.Min(p => p.y);
+                float maxY = positions.Max(p => p.y);
+                float minZ = positions.Min(p => p.z);
+                float maxZ = positions.Max(p => p.z);
+                float new_rangeX = maxX - minX;
+                float new_rangeY = maxY - minY;
+                float new_rangeZ = maxZ - minZ;
+                for (int i = 0; i < positions.Count; i++)
+                {
+                    positions[i] = new Vector3(
+                        (positions[i].x - minX) / new_rangeX,
+                        (positions[i].y - minY) / new_rangeY,
+                        (positions[i].z - minZ) / new_rangeZ
+                    );
+                }
+            }
+
+            // Print first 100 positions.
+            for (int i = 0; i < 100; i++)
+            {
+                // Debug.Log(positions[i]);
+            }
+
             // Calculate the number of points to render.
             int numPoints = 0;
             for (int i = 0; i < timesteps.Count; i++)

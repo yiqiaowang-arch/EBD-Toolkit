@@ -79,14 +79,13 @@ public class ProcessWalkthrough : MonoBehaviour
     public bool reuseHeatmap = false;
     public float pathWidth = 0.1f;
     private GameObject lineRendererParent;
-    private LineRenderer lineRenderer;
+    private Dictionary<string, LineRenderer> lineRenderer = new();
     private GameObject shortestPathLinerendererParent;
     private LineRenderer shortestPathLinerenderer;
-    private int numFiles;
     public Material lineRendererMaterial;
     public Material heatmapMaterial;
     private List<string> rawDataFileNames;
-    private string csvSep = ";";
+    private string csvSep = ",";
     public bool generateSummarizedDataFile;
     private string prec = "F3";
     public bool showTrajectoryProgressively = false;
@@ -141,12 +140,10 @@ public class ProcessWalkthrough : MonoBehaviour
             rawDataFileNames.Add(rawDataFileName);
         }
 
-        numFiles = rawDataFileNames.Count;
-
         // Parse each file and populate the positions and direction arrays.
         foreach (string fileName in rawDataFileNames)
         {
-            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName);
+            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName, separator: csvSep);
 
             // Check that all required columns are present.
             CheckColumns(columnNames);
@@ -191,15 +188,16 @@ public class ProcessWalkthrough : MonoBehaviour
                 {
                     hideFlags = HideFlags.HideInHierarchy
                 };
-                lineRenderer = lineRendererParent.AddComponent<LineRenderer>();
+                lineRenderer.Add(entry.Key, lineRendererParent.AddComponent<LineRenderer>());
                 Visualization.RenderTrajectory(
-                    lineRenderer: lineRenderer,
+                    lineRenderer: lineRenderer[entry.Key],
                     positions: currPositions.ToList(),
-                    timesteps: currTimes.ToList(),
+                    timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
                     progress: 1.0f,
                     gradient: trajectoryGradient,
                     trajectoryWidth: pathWidth,
-                    normalizeTime: true
+                    normalizeTime: true,
+                    normalizePosition: false
                 );
                 if (visualizeShortestPath)
                 {
@@ -252,9 +250,9 @@ public class ProcessWalkthrough : MonoBehaviour
                 Vector3[] currPositions = entry.Value.ToArray();
                 float[] currTimes = trajectoryTimes[entry.Key].ToArray();
                 Visualization.RenderTrajectory(
-                    lineRenderer: lineRenderer,
+                    lineRenderer: lineRenderer[entry.Key],
                     positions: currPositions.ToList(),
-                    timesteps: currTimes.ToList(),
+                    timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
                     progress: Time.realtimeSinceStartup % replayDuration / replayDuration,
                     gradient: trajectoryGradient,
                     trajectoryWidth: pathWidth,
@@ -484,7 +482,7 @@ public class ProcessWalkthrough : MonoBehaviour
             upDirections.Add(trialName, new List<Vector3>());
             rightDirections.Add(trialName, new List<Vector3>());
         }
-        times[trialName].Add(float.Parse(row[columnNames.IndexOf(timeColumnName)], CultureInfo.InvariantCulture));
+        times[trialName].Add(float.Parse(row[columnNames.IndexOf(timeColumnName)]));
         positions[trialName].Add(new Vector3(
             float.Parse(row[columnNames.IndexOf(positionXColumnName)], CultureInfo.InvariantCulture),
             float.Parse(row[columnNames.IndexOf(positionYColumnName)], CultureInfo.InvariantCulture),
@@ -564,7 +562,7 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             if (!columns.Contains(requiredColumn))
             {
-                throw new System.Exception("Column " + requiredColumn + " not found in data file.");
+                throw new System.Exception($"Column {requiredColumn} not found in data file. Possible columns are: {string.Join(", ", columns)}");
             }
         }
     }
