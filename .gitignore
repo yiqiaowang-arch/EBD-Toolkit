@@ -81,6 +81,7 @@ Data_VR_Summarized
 
 # Geometry
 # *.fbx
+Assets/Geometry
 
 # VS Code
 .vscode
