@@ -5,7 +5,9 @@ using UnityEngine.AI;
 using System.Linq;
 using EBD;
 using System.Globalization;
+
 using Trajectory = System.Collections.Generic.List<TrajectoryEntry>;
+
 public class ProcessWalkthrough : MonoBehaviour
 {
     // Public variables.
@@ -56,11 +58,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public bool inferEndLocation = true;
     public Transform startLocation;
     public Transform endLocation;
-    private Dictionary<string, List<Vector3>> trajectoryPositions = new();
-    private Dictionary<string, List<Vector3>> trajectoryForwardDirections = new();
-    private Dictionary<string, List<Vector3>> trajectoryUpDirections = new();
-    private Dictionary<string, List<Vector3>> trajectoryRightDirections = new();
-    private Dictionary<string, List<float>> trajectoryTimes = new();
+    private Dictionary<string, Trajectory> trajectories = new();
     public bool reuseHeatmap = false;
     public float pathWidth = 0.1f;
     private GameObject lineRendererParent;
@@ -148,16 +146,7 @@ public class ProcessWalkthrough : MonoBehaviour
             // Key is the trial name.
             foreach (List<string> row in data)
             {
-                ParseRow(
-                    row,
-                    Path.GetFileName(fileName), // This will be overwritten by participant id if `multipleTrialsInOneFile` is true.
-                    ref trajectoryTimes,
-                    ref trajectoryPositions,
-                    ref trajectoryForwardDirections,
-                    ref trajectoryUpDirections,
-                    ref trajectoryRightDirections,
-                    columnNames
-                );
+                ParseRow(row, Path.GetFileName(fileName), ref trajectories, columnNames);
             }
         }
 
@@ -177,10 +166,10 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         if (visualizeTrajectory)
         {
-            foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+            foreach (KeyValuePair<string, Trajectory> entry in trajectories)
             {
-                Vector3[] currPositions = entry.Value.ToArray();
-                float[] currTimes = trajectoryTimes[entry.Key].ToArray();
+                List<Vector3> currPositions = entry.Value.Select(x => x.position).ToList();
+                List<float> currTimes = entry.Value.Select(x => x.time).ToList();
                 lineRendererParent = new GameObject
                 {
                     hideFlags = HideFlags.HideInHierarchy
@@ -240,10 +229,10 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         if (visualizeTrajectory & showTrajectoryProgressively)
         {
-            foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+            foreach (KeyValuePair<string, Trajectory> entry in trajectories)
             {
-                Vector3[] currPositions = entry.Value.ToArray();
-                float[] currTimes = trajectoryTimes[entry.Key].ToArray();
+                List<Vector3> currPositions = entry.Value.Select(x => x.position).ToList();
+                List<float> currTimes = entry.Value.Select(x => x.time).ToList();
                 Visualization.RenderTrajectory(
                     lineRenderer: lineRenderer[entry.Key],
                     positions: currPositions.ToList(),
@@ -269,10 +258,7 @@ public class ProcessWalkthrough : MonoBehaviour
     }
 
     private List<Vector3> ComputeHitPositions(
-        List<Vector3> positions,
-        List<Vector3> forwardDirections,
-        List<Vector3> upDirections,
-        List<Vector3> rightDirections,
+        Trajectory trajectory,
         float radiusVertical,
         float radiusHorizontal,
         int numRaysPerRaycast,
@@ -282,19 +268,21 @@ public class ProcessWalkthrough : MonoBehaviour
         List<Vector3> hitPositions = new List<Vector3>();
 
         // For each trajectory.
-        for (int j = 0; j < positions.Count; j++)
+        for (int j = 0; j < trajectory.Count; j++)
         {
             hitPositions.AddRange(
                 VisualAttention.CastAndCollide(
-                    positions[j],
-                    forwardDirections[j],
-                    upDirections[j],
-                    rightDirections[j],
+                    trajectory[j].position,
+                    trajectory[j].forwardDirection,
+                    trajectory[j].upDirection,
+                    trajectory[j].rightDirection,
                     radiusVertical,
                     radiusHorizontal,
                     numRaysPerRaycast,
                     layerMask,
-                    ref hitCountPerLayer));
+                    ref hitCountPerLayer
+                )
+            );
         }
         return hitPositions;
     }
@@ -308,7 +296,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
         // Get the total number of positions.
         int totalNumPositions = 0;
-        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
             totalNumPositions += entry.Value.Count;
         }
@@ -317,7 +305,7 @@ public class ProcessWalkthrough : MonoBehaviour
         // trajectory is in the sample we will make sure that there is at least
         // one sample from each trajectory.
         Dictionary<string, int> numSamplesPerTrajectory = new();
-        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
             float trajectoryProportion = (float)entry.Value.Count / totalNumPositions;
             int numSamples = Mathf.CeilToInt(trajectoryProportion * numRayCast);
@@ -325,36 +313,24 @@ public class ProcessWalkthrough : MonoBehaviour
         }
 
         // Sample `maxNumRays` positions uniformly from all the trajectories.
-        Dictionary<string, List<Vector3>> sampledPositions = new();
-        Dictionary<string, List<Vector3>> sampledForwardDirections = new();
-        Dictionary<string, List<Vector3>> sampledUpDirections = new();
-        Dictionary<string, List<Vector3>> sampledRightDirections = new();
-        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        Dictionary<string, Trajectory> sampledTrajectories = new();
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
-            sampledPositions.Add(entry.Key, new List<Vector3>());
-            sampledForwardDirections.Add(entry.Key, new List<Vector3>());
-            sampledUpDirections.Add(entry.Key, new List<Vector3>());
-            sampledRightDirections.Add(entry.Key, new List<Vector3>());
+            sampledTrajectories.Add(entry.Key, new Trajectory());
             for (int i = 0; i < numSamplesPerTrajectory[entry.Key]; i++)
             {
                 int index = Random.Range(0, entry.Value.Count);
-                sampledPositions[entry.Key].Add(entry.Value[index]);
-                sampledForwardDirections[entry.Key].Add(trajectoryForwardDirections[entry.Key][index]);
-                sampledUpDirections[entry.Key].Add(trajectoryUpDirections[entry.Key][index]);
-                sampledRightDirections[entry.Key].Add(trajectoryRightDirections[entry.Key][index]);
+                sampledTrajectories[entry.Key].Add(trajectories[entry.Key][index]);
             }
         }
 
-        foreach (KeyValuePair<string, List<Vector3>> entry in sampledPositions)
+        foreach (KeyValuePair<string, Trajectory> entry in sampledTrajectories)
         {
             // Compute hit positions for each trajectory.
             int[] currHitsPerLayer = new int[32];
             hitPositions.AddRange(
                 ComputeHitPositions(
                     entry.Value,
-                    sampledForwardDirections[entry.Key],
-                    sampledUpDirections[entry.Key],
-                    sampledRightDirections[entry.Key],
                     outerConeRadiusVertical,
                     outerConeRadiusHorizontal,
                     numRaysPerRayCast,
@@ -407,24 +383,26 @@ public class ProcessWalkthrough : MonoBehaviour
         Dictionary<string, int> successfuls = new();
         Dictionary<string, List<float>> viewPercentages = new();
 
-        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
+            Trajectory currTrajectory = entry.Value;
+
             // Duration of a walkthrough is the temporal difference between the last update step and the first.
-            durations.Add(entry.Key, trajectoryTimes[entry.Key][trajectoryTimes[entry.Key].Count - 1] - trajectoryTimes[entry.Key][0]);
+            durations.Add(entry.Key, currTrajectory.Last().time - currTrajectory.First().time);
 
             // Add up distances between measures time-points. Note that the resolution at which the time-points are 
             // recorded will make a difference.
             float currDistance = 0.0f;
-            for (int j = 0; j < trajectoryPositions[entry.Key].Count - 1; j++)
+            for (int j = 0; j < currTrajectory.Count - 1; j++)
             {
-                currDistance += Vector3.Distance(trajectoryPositions[entry.Key][j], trajectoryPositions[entry.Key][j + 1]);
+                currDistance += Vector3.Distance(currTrajectory[j].position, currTrajectory[j + 1].position);
             }
             distances.Add(entry.Key, currDistance);
 
             averageSpeeds.Add(entry.Key, distances[entry.Key] / durations[entry.Key]);
 
-            Vector3 startPos = inferStartLocation ? entry.Value[0] : startLocation.position;
-            Vector3 endPos = inferEndLocation ? endLocation.position : entry.Value[entry.Value.Count - 1];
+            Vector3 startPos = inferStartLocation ? currTrajectory.First().position : startLocation.position;
+            Vector3 endPos = inferEndLocation ? currTrajectory.Last().position : endLocation.position;
 
             // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
             NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
@@ -448,7 +426,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
             ratioShortestPaths.Add(entry.Key, distances[entry.Key] / shortestPathDistances[entry.Key]);
 
-            if (Vector3.Distance(trajectoryPositions[entry.Key][trajectoryPositions[entry.Key].Count - 1], endLocation.position) < 2.0f)
+            if (Vector3.Distance(currTrajectory.Last().position, endPos) < 2.0f)
             {
                 successfuls.Add(entry.Key, 1);
             }
@@ -500,11 +478,7 @@ public class ProcessWalkthrough : MonoBehaviour
     private void ParseRow(
         List<string> row,
         string trialName,
-        ref Dictionary<string, List<float>> times,
-        ref Dictionary<string, List<Vector3>> positions,
-        ref Dictionary<string, List<Vector3>> forwardDirections,
-        ref Dictionary<string, List<Vector3>> upDirections,
-        ref Dictionary<string, List<Vector3>> rightDirections,
+        ref Dictionary<string, Trajectory> trajectories,
         List<string> columnNames
     )
     {
@@ -512,20 +486,23 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             trialName = row[columnNames.IndexOf(trialColumnName)];
         }
-        if (!times.ContainsKey(trialName))
+
+        // If we have not seen the trial before, we create a new trajectroy.
+        if (!trajectories.ContainsKey(trialName))
         {
-            times.Add(trialName, new List<float>());
-            positions.Add(trialName, new List<Vector3>());
-            forwardDirections.Add(trialName, new List<Vector3>());
-            upDirections.Add(trialName, new List<Vector3>());
-            rightDirections.Add(trialName, new List<Vector3>());
+            trajectories.Add(trialName, new Trajectory());
         }
-        times[trialName].Add(float.Parse(row[columnNames.IndexOf(timeColumnName)]));
-        positions[trialName].Add(new Vector3(
+
+        // Construct a new trajectory entry.
+        float currTime = float.Parse(row[columnNames.IndexOf(timeColumnName)], CultureInfo.InvariantCulture);
+        Vector3 currPosition = new Vector3(
             float.Parse(row[columnNames.IndexOf(positionXColumnName)], CultureInfo.InvariantCulture),
             float.Parse(row[columnNames.IndexOf(positionYColumnName)], CultureInfo.InvariantCulture),
             float.Parse(row[columnNames.IndexOf(positionZColumnName)], CultureInfo.InvariantCulture)
-        ));
+        );
+        Vector3 currForwardDirection;
+        Vector3 currUpDirection;
+        Vector3 currRightDirection;
         if (useQuaternion)
         {
             Quaternion currQuaternion = new(
@@ -534,28 +511,38 @@ public class ProcessWalkthrough : MonoBehaviour
                 float.Parse(row[columnNames.IndexOf(quaternionYColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(quaternionZColumnName)], CultureInfo.InvariantCulture)
             );
-            forwardDirections[trialName].Add(currQuaternion * Vector3.forward);
-            upDirections[trialName].Add(currQuaternion * Vector3.up);
-            rightDirections[trialName].Add(currQuaternion * Vector3.right);
+            currForwardDirection = currQuaternion * Vector3.forward;
+            currUpDirection = currQuaternion * Vector3.up;
+            currRightDirection = currQuaternion * Vector3.right;
         }
         else
         {
-            forwardDirections[trialName].Add(new Vector3(
+            currForwardDirection = new Vector3(
                 float.Parse(row[columnNames.IndexOf(directionXColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(directionYColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(directionZColumnName)], CultureInfo.InvariantCulture)
-            ));
-            upDirections[trialName].Add(new Vector3(
+            );
+            currUpDirection = new Vector3(
                 float.Parse(row[columnNames.IndexOf(upXColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(upYColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(upZColumnName)], CultureInfo.InvariantCulture)
-            ));
-            rightDirections[trialName].Add(new Vector3(
+            );
+            currRightDirection = new Vector3(
                 float.Parse(row[columnNames.IndexOf(rightXColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(rightYColumnName)], CultureInfo.InvariantCulture),
                 float.Parse(row[columnNames.IndexOf(rightZColumnName)], CultureInfo.InvariantCulture)
-            ));
+            );
         }
+
+        // Add the new entry to the trajectory.
+        trajectories[trialName].Add(new TrajectoryEntry
+        {
+            position = currPosition,
+            forwardDirection = currForwardDirection,
+            upDirection = currUpDirection,
+            rightDirection = currRightDirection,
+            time = currTime
+        });
     }
 
     private void CheckColumns(List<string> columns)
@@ -606,7 +593,7 @@ public class ProcessWalkthrough : MonoBehaviour
     }
 }
 
-struct TrajectoryEntry
+public struct TrajectoryEntry
 {
     public Vector3 position;
     public Vector3 forwardDirection;

@@ -79,7 +79,7 @@ namespace EBD
 
             // This is the path the file will be written to.
             string path = Path.Combine(dirName, fileName);
-            
+
             // Check if specified file exists yet and if user wants to overwrite.
             if (File.Exists(path))
             {
@@ -90,7 +90,7 @@ namespace EBD
                 */
                 string extension = Path.GetExtension(fileName);
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-                
+
                 // Check if there was a previous overwrite and get highest identifier.
                 int id = 0;
                 while (File.Exists(Path.Combine(dirName, fileNameWithoutExtension + "_" + id.ToString() + extension)))

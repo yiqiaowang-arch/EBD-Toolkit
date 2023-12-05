@@ -79,6 +79,7 @@ namespace EBD
         public static List<float> KernelDensityEstimate(List<Vector3> positions, float sigma)
         {
             int n = positions.Count;
+            Debug.Log(n);
 
             // Calculate the distances between each hit (parallel).
             float[] distances = new float[n * (n - 1) / 2];
