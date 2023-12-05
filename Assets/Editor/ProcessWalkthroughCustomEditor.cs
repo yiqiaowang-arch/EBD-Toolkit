@@ -185,6 +185,8 @@ public class ProcessWalkthroughCustomEditor : Editor
         EditorGUI.EndDisabledGroup();
         EditorGUI.indentLevel -= 2;
 
+        processor.csvDelimiter = EditorGUILayout.TextField("CSV Delimiter", processor.csvDelimiter);
+
         EditorGUILayout.Space();
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +210,8 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.indentLevel += 2;
             processor.reuseHeatmap = EditorGUILayout.ToggleLeft("Use processed data file", processor.reuseHeatmap);
             EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
-            processor.raysPerRaycast = EditorGUILayout.IntSlider("Rays per Raycast", processor.raysPerRaycast, 1, 200);
+            processor.numRaysPerRayCast = EditorGUILayout.IntSlider("Rays per Raycast", processor.numRaysPerRayCast, 1, 200);
+            processor.maxNumRays = EditorGUILayout.IntSlider("Max Rays", processor.maxNumRays, 1, 1000000);
             processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
             processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
 
@@ -277,11 +280,27 @@ public class ProcessWalkthroughCustomEditor : Editor
                     new GUIContent("Infer start location", "Check this if you want the script to automatically infer where the agent has started."),
                     processor.inferStartLocation
                 );
+
+                // Should the end location of the shortest path inferred automatically ot chosen manually.
+                processor.inferEndLocation = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Infer end location", "Check this if you want the script to automatically infer where the agent has ended."),
+                    processor.inferEndLocation
+                );
+
                 EditorGUI.BeginDisabledGroup(processor.inferStartLocation);
                 {
                     processor.startLocation = EditorGUILayout.ObjectField(
                         new GUIContent("Start", "The gameobject that corresponds to the start"),
                         processor.startLocation, typeof(Transform), true
+                    ) as Transform;
+                }
+                EditorGUI.EndDisabledGroup();
+
+                EditorGUI.BeginDisabledGroup(processor.inferEndLocation);
+                {
+                    processor.endLocation = EditorGUILayout.ObjectField(
+                        new GUIContent("End", "The gameobject that corresponds to the target"),
+                        processor.endLocation, typeof(Transform), true
                     ) as Transform;
                 }
                 EditorGUI.EndDisabledGroup();

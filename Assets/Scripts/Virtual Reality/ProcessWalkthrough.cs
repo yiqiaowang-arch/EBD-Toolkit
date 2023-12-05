@@ -1,29 +1,11 @@
-﻿/*
-DesignMind: A Toolkit for Evidence-Based, Cognitively- Informed and Human-Centered Architectural Design
-Copyright (C) 2023 Michal Gath-Morad, Christoph Hölscher, Raphaël Baur
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>
-*/
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using UnityEngine.AI;
 using System.Linq;
 using EBD;
 using System.Globalization;
-
+using Trajectory = System.Collections.Generic.List<TrajectoryEntry>;
 public class ProcessWalkthrough : MonoBehaviour
 {
     // Public variables.
@@ -42,7 +24,9 @@ public class ProcessWalkthrough : MonoBehaviour
     // Public variables concerned with the raycast.
     public float horizontalViewAngle = 90.0f;
     public float verticalViewAngle = 60.0f;
-    public int raysPerRaycast = 100;
+    public int numRaysPerRayCast = 100;
+    public int maxNumRays = 1000;
+    public int numRayCast = 0;
 
     // Private variables concerned with the raycast.
     private float outerConeRadiusHorizontal;
@@ -59,7 +43,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;
     public string inSummarizedDataFileName;
-    private List<Vector3> hitPositions = new List<Vector3>();
+    private List<Vector3> hitPositions = new();
     private List<float> kdeValues;
     private List<int[]> hitsPerLayer;
     public bool visualizeHeatmap = false;
@@ -69,6 +53,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public Gradient shortestPathGradient;
     public bool visualizeShortestPath = false;
     public bool inferStartLocation = true;
+    public bool inferEndLocation = true;
     public Transform startLocation;
     public Transform endLocation;
     private Dictionary<string, List<Vector3>> trajectoryPositions = new();
@@ -85,12 +70,14 @@ public class ProcessWalkthrough : MonoBehaviour
     public Material lineRendererMaterial;
     public Material heatmapMaterial;
     private List<string> rawDataFileNames;
-    private string csvSep = ",";
+    public string csvDelimiter = ",";
     public bool generateSummarizedDataFile;
     private string prec = "F3";
     public bool showTrajectoryProgressively = false;
     public float replayDuration = 10.0f;
     public bool useQuaternion = false;
+
+    // Column names of the file to be parsed.
     public string positionXColumnName = "PositionX";
     public string positionYColumnName = "PositionY";
     public string positionZColumnName = "PositionZ";
@@ -110,8 +97,18 @@ public class ProcessWalkthrough : MonoBehaviour
     public string quaternionZColumnName = "QuaternionZ";
     public bool multipleTrialsInOneFile = false;
     public string trialColumnName = "Trial";
+
     void Start()
     {
+        // The total number of rays cannot be smaller than the number of rays per raycast.
+        if (numRaysPerRayCast > maxNumRays)
+        {
+            Debug.LogError("numRaysPerRayCast must be smaller than maxNumRays.");
+        }
+        numRayCast = Mathf.CeilToInt((float)maxNumRays / numRaysPerRayCast);
+
+        // If end location
+
         if (lineRendererMaterial == null)
         {
             lineRendererMaterial = new Material(Shader.Find("Sprites/Default"));  // Default material for linerenderer.
@@ -143,7 +140,7 @@ public class ProcessWalkthrough : MonoBehaviour
         // Parse each file and populate the positions and direction arrays.
         foreach (string fileName in rawDataFileNames)
         {
-            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName, separator: csvSep);
+            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName, separator: csvDelimiter);
 
             // Check that all required columns are present.
             CheckColumns(columnNames);
@@ -220,7 +217,6 @@ public class ProcessWalkthrough : MonoBehaviour
                     // Create shortest path.
                     NavMeshPath navMeshPath = new NavMeshPath();
                     NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
-                    /*
                     Visualization.RenderTrajectory(
                         lineRenderer: shortestPathLinerenderer,
                         positions: navMeshPath.corners.ToList(),
@@ -230,7 +226,6 @@ public class ProcessWalkthrough : MonoBehaviour
                         trajectoryWidth: pathWidth,
                         normalizeTime: true
                     );
-                    */
                 }
             }
         }
@@ -309,19 +304,60 @@ public class ProcessWalkthrough : MonoBehaviour
         // Unity generates 32 layers per default.
         hitsPerLayer = new List<int[]>();
 
+        // Subsample the trajectory.
+
+        // Get the total number of positions.
+        int totalNumPositions = 0;
         foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        {
+            totalNumPositions += entry.Value.Count;
+        }
+
+        // This is not stricly uniform sampling, but to ensure that each 
+        // trajectory is in the sample we will make sure that there is at least
+        // one sample from each trajectory.
+        Dictionary<string, int> numSamplesPerTrajectory = new();
+        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        {
+            float trajectoryProportion = (float)entry.Value.Count / totalNumPositions;
+            int numSamples = Mathf.CeilToInt(trajectoryProportion * numRayCast);
+            numSamplesPerTrajectory.Add(entry.Key, numSamples);
+        }
+
+        // Sample `maxNumRays` positions uniformly from all the trajectories.
+        Dictionary<string, List<Vector3>> sampledPositions = new();
+        Dictionary<string, List<Vector3>> sampledForwardDirections = new();
+        Dictionary<string, List<Vector3>> sampledUpDirections = new();
+        Dictionary<string, List<Vector3>> sampledRightDirections = new();
+        foreach (KeyValuePair<string, List<Vector3>> entry in trajectoryPositions)
+        {
+            sampledPositions.Add(entry.Key, new List<Vector3>());
+            sampledForwardDirections.Add(entry.Key, new List<Vector3>());
+            sampledUpDirections.Add(entry.Key, new List<Vector3>());
+            sampledRightDirections.Add(entry.Key, new List<Vector3>());
+            for (int i = 0; i < numSamplesPerTrajectory[entry.Key]; i++)
+            {
+                int index = Random.Range(0, entry.Value.Count);
+                sampledPositions[entry.Key].Add(entry.Value[index]);
+                sampledForwardDirections[entry.Key].Add(trajectoryForwardDirections[entry.Key][index]);
+                sampledUpDirections[entry.Key].Add(trajectoryUpDirections[entry.Key][index]);
+                sampledRightDirections[entry.Key].Add(trajectoryRightDirections[entry.Key][index]);
+            }
+        }
+
+        foreach (KeyValuePair<string, List<Vector3>> entry in sampledPositions)
         {
             // Compute hit positions for each trajectory.
             int[] currHitsPerLayer = new int[32];
             hitPositions.AddRange(
                 ComputeHitPositions(
                     entry.Value,
-                    trajectoryForwardDirections[entry.Key],
-                    trajectoryUpDirections[entry.Key],
-                    trajectoryRightDirections[entry.Key],
+                    sampledForwardDirections[entry.Key],
+                    sampledUpDirections[entry.Key],
+                    sampledRightDirections[entry.Key],
                     outerConeRadiusVertical,
                     outerConeRadiusHorizontal,
-                    raysPerRaycast,
+                    numRaysPerRayCast,
                     layerMask,
                     ref currHitsPerLayer
                     )
@@ -341,7 +377,7 @@ public class ProcessWalkthrough : MonoBehaviour
         kdeValues = new List<float>();
         for (int i = 0; i < allLines.Length; i++)
         {
-            string[] line = allLines[i].Split(csvSep);
+            string[] line = allLines[i].Split(csvDelimiter);
             particlePositions[i] = new Vector3(float.Parse(line[0]), float.Parse(line[1]), float.Parse(line[2]));
             kdeValues[i] = float.Parse(line[3]);
         }
@@ -353,7 +389,7 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             for (int i = 0; i < hitPositions.Count; i++)
             {
-                processedDataFile.WriteLine(hitPositions[i].x + csvSep + hitPositions[i].y + csvSep + hitPositions[i].z + kdeValues[i]);
+                processedDataFile.WriteLine(hitPositions[i].x + csvDelimiter + hitPositions[i].y + csvDelimiter + hitPositions[i].z + kdeValues[i]);
             }
         }
     }
@@ -388,7 +424,7 @@ public class ProcessWalkthrough : MonoBehaviour
             averageSpeeds.Add(entry.Key, distances[entry.Key] / durations[entry.Key]);
 
             Vector3 startPos = inferStartLocation ? entry.Value[0] : startLocation.position;
-            Vector3 endPos = endLocation.position;
+            Vector3 endPos = inferEndLocation ? endLocation.position : entry.Value[entry.Value.Count - 1];
 
             // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
             NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
@@ -431,7 +467,8 @@ public class ProcessWalkthrough : MonoBehaviour
                 "SurplusShortestPath",
                 "RatioShortestPath",
                 "Successful"
-            };
+        };
+
         for (int i = 0; i < hitsPerLayer[0].Length; i++)
         {
             columnNames.Add(LayerMask.LayerToName(i));
@@ -450,13 +487,14 @@ public class ProcessWalkthrough : MonoBehaviour
                     ratioShortestPaths[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
                     successfuls[entry.Key].ToString(prec, CultureInfo.InvariantCulture)
                 };
+
             for (int j = 0; j < hitsPerLayer[0].Length; j++)
             {
                 row.Add(hitsPerLayer[0][j].ToString(prec, CultureInfo.InvariantCulture));
             }
             data.Add(row);
         }
-        IO.WriteToCSV(outSummarizedDataFileName, columnNames, data, csvSep);
+        IO.WriteToCSV(outSummarizedDataFileName, columnNames, data, csvDelimiter);
     }
 
     private void ParseRow(
@@ -566,4 +604,13 @@ public class ProcessWalkthrough : MonoBehaviour
             }
         }
     }
+}
+
+struct TrajectoryEntry
+{
+    public Vector3 position;
+    public Vector3 forwardDirection;
+    public Vector3 upDirection;
+    public Vector3 rightDirection;
+    public float time;
 }

@@ -81,7 +81,15 @@ Data_VR_Summarized
 
 # Geometry
 *.fbx
+*.FBX
+*.jpg
+*.jpeg
+*.meta
+*.png
+*.gif
+*.JPG
 Assets/Geometry/
+Assets/Prefabs/Westgate Shopping Mall_Final Variant.prefab
 
 # VS Code
 .vscode
