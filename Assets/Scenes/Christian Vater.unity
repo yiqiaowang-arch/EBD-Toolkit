@@ -400,11 +400,7 @@ MonoBehaviour:
   quaternionZColumnName: GlobalRotation4
   multipleTrialsInOneFile: 1
   trialColumnName: Trial_id
-  filters:
-  - list:
-    - Trial_id
-    - 5
-    - 7
+  filters: []
 --- !u!4 &1800723568
 Transform:
   m_ObjectHideFlags: 0

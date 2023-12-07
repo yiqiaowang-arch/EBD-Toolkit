@@ -190,6 +190,24 @@ public class ProcessWalkthroughCustomEditor : Editor
         EditorGUILayout.Space();
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///                                                                                                           //
+        /// Data Processing                                                                                           //
+        ///                                                                                                           //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        HorizontalSeperator();
+
+        EditorGUILayout.Space();
+
+        GUILayout.Label("Data Processing", EditorStyles.boldLabel);
+
+        EditorGUILayout.Space();
+
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("filters"), true);
+        serializedObject.ApplyModifiedProperties();
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //                                                                                                            //
         // Visualization                                                                                              //
         //                                                                                                            //
@@ -230,11 +248,6 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.indentLevel -= 2;
         }
         EditorGUILayout.EndFadeGroup();
-
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("filters"), true);
-        serializedObject.ApplyModifiedProperties();
-
 
         EditorGUILayout.Space();
 
