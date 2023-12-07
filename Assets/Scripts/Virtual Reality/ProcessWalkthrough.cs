@@ -287,8 +287,6 @@ public class ProcessWalkthrough : MonoBehaviour
                 VisualAttention.CastAndCollide(
                     trajectory[j].position,
                     trajectory[j].forwardDirection,
-                    trajectory[j].upDirection,
-                    trajectory[j].rightDirection,
                     radiusVertical,
                     radiusHorizontal,
                     numRaysPerRaycast,
@@ -466,8 +464,15 @@ public class ProcessWalkthrough : MonoBehaviour
         }
 
         List<List<string>> data = new();
-        foreach (KeyValuePair<string, float> entry in durations)
+        List<int> totalHitsPerLayer = new();
+        for (int i = 0; i < hitsPerLayer.Count; i++)
         {
+            totalHitsPerLayer.Add(hitsPerLayer[i].Sum());
+        }
+        // foreach (KeyValuePair<string, float> entry in durations)
+        for (int i = 0; i < durations.Count; i++)
+        {
+            KeyValuePair<string, float> entry = durations.ElementAt(i);
             List<string> row = new() {
                     entry.Key,
                     durations[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
@@ -479,9 +484,9 @@ public class ProcessWalkthrough : MonoBehaviour
                     successfuls[entry.Key].ToString(prec, CultureInfo.InvariantCulture)
                 };
 
-            for (int j = 0; j < hitsPerLayer[0].Length; j++)
+            for (int j = 0; j < hitsPerLayer[i].Length; j++)
             {
-                row.Add(hitsPerLayer[0][j].ToString(prec, CultureInfo.InvariantCulture));
+                row.Add((hitsPerLayer[i][j] / totalHitsPerLayer[i]).ToString(prec, CultureInfo.InvariantCulture));
             }
             data.Add(row);
         }
@@ -508,7 +513,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
         // Construct a new trajectory entry.
         float currTime = float.Parse(row[columnNames.IndexOf(timeColumnName)], CultureInfo.InvariantCulture);
-        Vector3 currPosition = new Vector3(
+        Vector3 currPosition = new(
             float.Parse(row[columnNames.IndexOf(positionXColumnName)], CultureInfo.InvariantCulture),
             float.Parse(row[columnNames.IndexOf(positionYColumnName)], CultureInfo.InvariantCulture),
             float.Parse(row[columnNames.IndexOf(positionZColumnName)], CultureInfo.InvariantCulture)

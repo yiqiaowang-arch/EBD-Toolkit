@@ -6,8 +6,6 @@ public class VisualAttention
     public static List<Vector3> CastAndCollide(
         Vector3 srcPos,
         Vector3 forward,
-        Vector3 up,
-        Vector3 right,
         float radiusVertical,
         float radiusHorizontal,
         int numRaysPerRaycast,
