@@ -95,6 +95,8 @@ public class ProcessWalkthrough : MonoBehaviour
     public string quaternionZColumnName = "QuaternionZ";
     public bool multipleTrialsInOneFile = false;
     public string trialColumnName = "Trial";
+    public List<SerializableStringList> filters = new();
+    private Dictionary<string, List<string>> filterDict = new();
 
     void Start()
     {
@@ -103,9 +105,17 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             Debug.LogError("numRaysPerRayCast must be smaller than maxNumRays.");
         }
-        numRayCast = Mathf.CeilToInt((float)maxNumRays / numRaysPerRayCast);
 
-        // If end location
+        foreach (SerializableStringList filter in filters)
+        {
+            if (filter.list.Count < 2)
+            {
+                Debug.LogError("Each filter must have at least two elements. First element is the column name, the rest are the values to be filtered.");
+            }
+            filterDict.Add(filter.list[0], filter.list.Skip(1).ToList());
+        }
+
+        numRayCast = Mathf.CeilToInt((float)maxNumRays / numRaysPerRayCast);
 
         if (lineRendererMaterial == null)
         {
@@ -138,7 +148,10 @@ public class ProcessWalkthrough : MonoBehaviour
         // Parse each file and populate the positions and direction arrays.
         foreach (string fileName in rawDataFileNames)
         {
-            (List<string> columnNames, List<List<string>> data) = IO.ReadFromCSV(fileName, separator: csvDelimiter);
+            (List<string> columnNames, List<List<string>> data) = IO.ReadCSV(fileName, separator: csvDelimiter);
+
+            // Filter data.
+            data = FilterData(columnNames, data, filters.Select(x => (x.list[0], x.list.Skip(1).ToList())).ToList());
 
             // Check that all required columns are present.
             CheckColumns(columnNames);
@@ -265,7 +278,7 @@ public class ProcessWalkthrough : MonoBehaviour
         LayerMask layerMask,
         ref int[] hitCountPerLayer)
     {
-        List<Vector3> hitPositions = new List<Vector3>();
+        List<Vector3> hitPositions = new();
 
         // For each trajectory.
         for (int j = 0; j < trajectory.Count; j++)
@@ -472,7 +485,7 @@ public class ProcessWalkthrough : MonoBehaviour
             }
             data.Add(row);
         }
-        IO.WriteToCSV(outSummarizedDataFileName, columnNames, data, csvDelimiter);
+        IO.WriteCSV(outSummarizedDataFileName, columnNames, data, csvDelimiter);
     }
 
     private void ParseRow(
@@ -591,6 +604,41 @@ public class ProcessWalkthrough : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="columnNames"></param>
+    /// <param name="data"></param>
+    /// <param name="filters"></param>
+    /// <returns></returns> <summary>
+    private List<List<string>> FilterData(
+        List<string> columnNames,
+        List<List<string>> data,
+        List<(string, List<string>)> filters
+    )
+    {
+        List<List<string>> filteredData = new();
+
+        // Go through each row and check if the row satisfies all filters.
+        foreach (List<string> row in data)
+        {
+            bool satisfiesAllFilters = true;
+            foreach ((string columnName, List<string> filterValues) in filters)
+            {
+                if (!filterValues.Contains(row[columnNames.IndexOf(columnName)]))
+                {
+                    satisfiesAllFilters = false;
+                    break;
+                }
+            }
+            if (satisfiesAllFilters)
+            {
+                filteredData.Add(row);
+            }
+        }
+        return filteredData;
+    }
 }
 
 public struct TrajectoryEntry
@@ -600,4 +648,10 @@ public struct TrajectoryEntry
     public Vector3 upDirection;
     public Vector3 rightDirection;
     public float time;
+}
+
+[System.Serializable]
+public class SerializableStringList
+{
+    public List<string> list;
 }

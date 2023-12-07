@@ -19,7 +19,7 @@ namespace EBD
         /// Throws and exception if length of <paramref name="columnNames"/> does not match length of each element of
         /// <paramref name="data"/>
         /// </exception>
-        public static void WriteToCSV(
+        public static void WriteCSV(
             string filePath,
             List<string> columnNames,
             List<List<string>> data,
@@ -53,7 +53,7 @@ namespace EBD
         /// <param name="separator">Separator used.</param>
         /// <returns>List of strings corresponding to column names and list of list of strings where each inner list
         /// corresponds to a row.</returns>
-        public static (List<string>, List<List<string>>) ReadFromCSV(string filePath, string separator = ";")
+        public static (List<string>, List<List<string>>) ReadCSV(string filePath, string separator = ";")
         {
             List<string> columnNames = new();
             List<List<string>> data = new();

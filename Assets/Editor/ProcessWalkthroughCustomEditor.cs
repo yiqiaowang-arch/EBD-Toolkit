@@ -231,6 +231,11 @@ public class ProcessWalkthroughCustomEditor : Editor
         }
         EditorGUILayout.EndFadeGroup();
 
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("filters"), true);
+        serializedObject.ApplyModifiedProperties();
+
+
         EditorGUILayout.Space();
 
         EditorGUI.BeginDisabledGroup(!processor.generateData);
@@ -304,12 +309,6 @@ public class ProcessWalkthroughCustomEditor : Editor
                     ) as Transform;
                 }
                 EditorGUI.EndDisabledGroup();
-
-                // Setting the endlocation.
-                processor.endLocation = EditorGUILayout.ObjectField(
-                    new GUIContent("Target", "The gameobject that corresponds to the target"),
-                    processor.endLocation, typeof(Transform), true
-                ) as Transform;
 
                 EditorGUI.BeginChangeCheck();
                 SerializedObject serializedGradient1 = new SerializedObject(target);

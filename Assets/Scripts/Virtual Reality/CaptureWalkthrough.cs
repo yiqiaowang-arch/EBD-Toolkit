@@ -24,7 +24,7 @@ public class CaptureWalkthrough : MonoBehaviour
     private List<float> xAngle;                     // Elevation.
     private List<float> time;                       // Time.
     private float lastSample;                       // The time the last sample was taken.  
-    private const string csvSep = ";";  
+    private const string csvSep = ";";
 
     // Start is called before the first frame update
     void Start()
@@ -93,7 +93,7 @@ public class CaptureWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
 
             // Write data.
-            IO.WriteToCSV(fileName, columnNames, data, csvSep);
+            IO.WriteCSV(fileName, columnNames, data, csvSep);
             EditorApplication.ExitPlaymode();
         }
     }
@@ -138,7 +138,7 @@ public class CaptureWalkthrough : MonoBehaviour
             };
             data.Add(row);
         }
-        
+
         return (columnNames, data);
     }
 
@@ -151,7 +151,7 @@ public class CaptureWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
 
             // Write data.
-            IO.WriteToCSV(fileName, columnNames, data, csvSep);
+            IO.WriteCSV(fileName, columnNames, data, csvSep);
         }
     }
 }
