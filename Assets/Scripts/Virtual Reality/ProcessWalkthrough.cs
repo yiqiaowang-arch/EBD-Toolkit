@@ -200,8 +200,8 @@ public class ProcessWalkthrough : MonoBehaviour
                 );
                 if (visualizeShortestPath)
                 {
-                    Vector3 startPos = inferStartLocation ? currPositions[0] : startLocation.position;
-                    Vector3 endPos = endLocation.position;
+                    Vector3 startPos = inferStartLocation ? currPositions.First() : startLocation.position;
+                    Vector3 endPos = inferEndLocation ? currPositions.Last() : endLocation.position;
 
                     // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
                     NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
