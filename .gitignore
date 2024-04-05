@@ -93,3 +93,11 @@ Assets/Prefabs/Westgate Shopping Mall_Final Variant.prefab
 
 # VS Code
 .vscode
+
+# Grasshopper plugin state files
+rhino_grasshopper_files/graph_state.txt
+rhino_grasshopper_files/measure_time_series.txt
+
+# Ignore Rhino temp files
+*.3dm.rhl
+*.3dmbak
