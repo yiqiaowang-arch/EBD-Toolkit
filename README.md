@@ -26,6 +26,8 @@ After the installation has finished, we are ready to add EBD-Toolkit project to 
 >Depending on your exact version of Unity, you will see a prompt asking you if you want to upgrade the project to a newer version of Unity. Choose _Confirm_
 
 The first time you open the project, the start-up might take a few minutes.
+
+
 # Cognitive Walkthroughs in Virtual Reality
 The EBD-Toolkit provides a set of scripts to perform virtual walkthroughs in scenes where you visualize your design.
 >[!TIP]
