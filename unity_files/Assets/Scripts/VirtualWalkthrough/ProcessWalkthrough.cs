@@ -259,17 +259,6 @@ public class ProcessWalkthrough : MonoBehaviour
         }
     }
 
-    public string CreateDerivedDataFileName(string rawDataDirectory, string rawDataFileName, string type)
-    {
-        if (useAllFilesInDirectory)
-        {
-            string[] splitRawDataDirectory = rawDataDirectory.Split('/');
-            return "all_files_in_" + splitRawDataDirectory[splitRawDataDirectory.Length - 1] + "_" + type + ".csv";
-        }
-        string[] splitRawDir = rawDataDirectory.Split('/');
-        return splitRawDir[splitRawDir.Length - 1] + "_" + Path.GetFileNameWithoutExtension(rawDataFileName) + "_" + type + Path.GetExtension(rawDataFileName);
-    }
-
     private List<Vector3> ComputeHitPositions(
         Trajectory trajectory,
         float radiusVertical,
