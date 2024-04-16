@@ -116,7 +116,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         if (GUILayout.Button("Delete file", GUILayout.Width(buttonWidth)))
         {
-            string fileNameToDelete = EditorUtility.OpenFilePanel("Delete file", "RawData", "csv");
+            string fileNameToDelete = EditorUtility.OpenFilePanel("Delete file", defaultRawDataPath, "csv");
 
             if (fileNameToDelete != "")
             {
@@ -157,7 +157,9 @@ public class ProcessWalkthroughCustomEditor : Editor
         processor.multipleTrialsInOneFile = EditorGUILayout.Toggle("Multiple Trials in One File", processor.multipleTrialsInOneFile);
         EditorGUI.BeginDisabledGroup(!processor.multipleTrialsInOneFile);
         {
-            processor.trialColumnName = EditorGUILayout.TextField("Trial", processor.trialColumnName);
+            serializedObject.Update();
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("keyColumns"), true);
+            serializedObject.ApplyModifiedProperties();
         }
         EditorGUI.EndDisabledGroup();
         EditorGUI.indentLevel -= 2;

@@ -39,8 +39,8 @@ public class ProcessWalkthrough : MonoBehaviour
     public float kernelSize = 1.0f;
 
     public bool useAllFilesInDirectory = false;
-    public string rawDataDirectory = "VR_Data/Default";
-    public string rawDataFileName = "VR_Data/Default/default.csv";
+    public string rawDataDirectory = Path.Combine("Data", "VirtualWalkthrough", "Raw");
+    public string rawDataFileName = Path.Combine("Data", "VirtualWalkthrough", "Raw", "Walkthrough.csv");
     public string outProcessedDataFileName;
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;
@@ -94,7 +94,11 @@ public class ProcessWalkthrough : MonoBehaviour
     public string quaternionYColumnName = "QuaternionY";
     public string quaternionZColumnName = "QuaternionZ";
     public bool multipleTrialsInOneFile = false;
-    public string trialColumnName = "Trial";
+
+    // This list contains the names of columns that constitute the key of a trial.
+    public List<SerializableStringList> keyColumns = new();
+
+    // This list contains the names of columns that are used for filtering the data.
     public List<SerializableStringList> filters = new();
     private Dictionary<string, List<string>> filterDict = new();
 
@@ -125,6 +129,7 @@ public class ProcessWalkthrough : MonoBehaviour
         {
             heatmapMaterial = new Material(Shader.Find("Particles/Priority Additive (Soft)")); // Default material for heatmap.
         }
+        
         // Set material of particle system.
         gameObject.GetComponent<ParticleSystemRenderer>().material = heatmapMaterial;
         outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
@@ -151,15 +156,20 @@ public class ProcessWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = IO.ReadCSV(fileName, separator: csvDelimiter);
 
             // Filter data.
-            data = FilterData(columnNames, data, filters.Select(x => (x.list[0], x.list.Skip(1).ToList())).ToList());
+            data = FilterData(columnNames, data, filters.Select(x => (x.list.First(), x.list.Skip(1).ToList())).ToList());
 
             // Check that all required columns are present.
             CheckColumns(columnNames);
 
-            // Key is the trial name.
+            // Parse the data and populate the positions and direction arrays.
             foreach (List<string> row in data)
             {
-                ParseRow(row, Path.GetFileName(fileName), ref trajectories, columnNames);
+                ParseRow(
+                    row,
+                    Path.GetFileName(fileName),
+                    ref trajectories,
+                    columnNames
+                );
             }
         }
 
@@ -605,7 +615,8 @@ public class ProcessWalkthrough : MonoBehaviour
     /// <param name="columnNames"></param>
     /// <param name="data"></param>
     /// <param name="filters"></param>
-    /// <returns></returns> <summary>
+    /// <returns></returns>
+    /// <summary>
     private List<List<string>> FilterData(
         List<string> columnNames,
         List<List<string>> data,
