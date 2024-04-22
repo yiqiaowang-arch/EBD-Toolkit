@@ -81,64 +81,6 @@ namespace EBD
             lineRenderer.SetPositions(positions.GetRange(0, numPoints).ToArray());
         }
 
-        public static List<float> KernelDensityEstimate(List<Vector3> positions, float sigma)
-        {
-            int n = positions.Count;
-            Debug.Log(n);
-
-            // Calculate the distances between each hit (parallel).
-            float[] distances = new float[n * (n - 1) / 2];
-            int k = 0;
-
-            // Precomputing indices into flattened distances_parallel array.
-            int[] rowIndices = new int[n * (n - 1) / 2];
-            int[] colIndices = new int[n * (n - 1) / 2];
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = i + 1; j < n; j++)
-                {
-                    rowIndices[k] = i;
-                    colIndices[k] = j;
-                    k++;
-                }
-            }
-
-            // Computing distances in parallel.
-            Parallel.For(0, distances.Length, K =>
-            {
-                distances[K] = Vector3.SqrMagnitude(positions[rowIndices[K]] - positions[colIndices[K]]);
-            });
-
-            // Calculate KDE with precomputation.
-            // Compute partial row-wise and column-wise sums.
-            float[] rowSums = new float[n];
-            float[] colSums = new float[n];
-            Parallel.For(0, distances.Length, K =>
-            {
-                float val = Mathf.Exp(-distances[K] / sigma);
-                rowSums[rowIndices[K]] += val;
-                colSums[colIndices[K]] += val;
-            });
-
-            // Combine partial sums to yield final result.
-            List<float> heatmapValues = new List<float>();
-            for (int i = 0; i < n; i++)
-            {
-                heatmapValues.Add(rowSums[i] + colSums[i]);
-            }
-
-            // Normalize results.
-            float min = heatmapValues.Min();
-            float max = heatmapValues.Max();
-            float new_range = max - min;
-            Parallel.For(0, n, i =>
-            {
-                heatmapValues[i] = (heatmapValues[i] - min) / new_range;
-            });
-
-            return heatmapValues;
-        }
-
         public static void SetupParticleSystem(
             ParticleSystem particleSystem,
             List<Vector3> particlePositions,

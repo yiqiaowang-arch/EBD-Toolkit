@@ -5,10 +5,8 @@ using UnityEngine.AI;
 using System.Linq;
 using EBD;
 using System.Globalization;
-
-using Trajectory = System.Collections.Generic.List<TrajectoryEntry>;
+using Trajectory = System.Collections.Generic.List<EBD.TrajectoryEntry>;
 using System;
-using System.Data.Common;
 
 public class ProcessWalkthrough : MonoBehaviour
 {
@@ -321,7 +319,6 @@ public class ProcessWalkthrough : MonoBehaviour
 
     private void CreateHeatMap()
     {
-
         // Subsample the trajectory.
 
         // Get the total number of positions.
@@ -373,8 +370,9 @@ public class ProcessWalkthrough : MonoBehaviour
             hitsPerLayer[entry.Key] = currHitsPerLayer;
         }
 
-        kdeValues = Visualization.KernelDensityEstimate(hitPositions, kernelSize);
+        kdeValues = KernelDensityEstimate.Evaluate(hitPositions, hitPositions, kernelSize);
         particlePositions = hitPositions.ToArray();
+        Debug.Log($"Number of hit positions: {hitPositions.Count}");
     }
 
     private void LoadHeatMap()
@@ -697,15 +695,6 @@ public class ProcessWalkthrough : MonoBehaviour
         List<string> keyValues = keyComponents.Select(x => x.Split("=")[1]).ToList();
         return (keyColumns, keyValues);
     }
-}
-
-public struct TrajectoryEntry
-{
-    public Vector3 Position;
-    public Vector3 ForwardDirection;
-    public Vector3 UpDirection;
-    public Vector3 RightDirection;
-    public float TimeStamp;
 }
 
 [Serializable]
