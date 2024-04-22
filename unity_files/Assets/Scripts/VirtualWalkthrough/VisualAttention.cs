@@ -76,7 +76,19 @@ namespace EBD
             return true;
         }
 
-        private void CreateHeatMap()
+        private void CreateHeatMap(
+            Dictionary<string, Trajectory> trajectories,
+            int numRayCast,
+            float outerConeRadiusVertical,
+            float outerConeRadiusHorizontal,
+            int numRaysPerRayCast,
+            LayerMask layerMask,
+            float kernelSize,
+            out Dictionary<string, int[]> hitsPerLayer,
+            out List<Vector3> hitPositions,
+            out List<float> kdeValues,
+            out Vector3[] particlePositions
+        )
         {
             // Subsample the trajectory.
 
@@ -105,7 +117,7 @@ namespace EBD
                 subsampledTrajectories.Add(entry.Key, new Trajectory());
                 for (int i = 0; i < numSamplesPerTrajectory[entry.Key]; i++)
                 {
-                    int index = UnityEngine.Random.Range(0, entry.Value.Count);
+                    int index = Random.Range(0, entry.Value.Count);
                     subsampledTrajectories[entry.Key].Add(trajectories[entry.Key][index]);
                 }
             }
@@ -132,6 +144,34 @@ namespace EBD
             kdeValues = KernelDensityEstimate.Evaluate(hitPositions, hitPositions, kernelSize);
             particlePositions = hitPositions.ToArray();
             Debug.Log($"Number of hit positions: {hitPositions.Count}");
+        }
+
+        private List<Vector3> ComputeHitPositions(
+        Trajectory trajectory,
+        float radiusVertical,
+        float radiusHorizontal,
+        int numRaysPerRaycast,
+        LayerMask layerMask,
+        ref int[] hitCountPerLayer)
+        {
+            List<Vector3> hitPositions = new();
+
+            // For each trajectory.
+            for (int j = 0; j < trajectory.Count; j++)
+            {
+                hitPositions.AddRange(
+                    VisualAttention.CastAndCollide(
+                        trajectory[j].Position,
+                        trajectory[j].ForwardDirection,
+                        radiusVertical,
+                        radiusHorizontal,
+                        numRaysPerRaycast,
+                        layerMask,
+                        ref hitCountPerLayer
+                    )
+                );
+            }
+            return hitPositions;
         }
     }
 }
