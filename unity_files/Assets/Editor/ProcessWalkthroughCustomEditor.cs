@@ -103,14 +103,14 @@ public class ProcessWalkthroughCustomEditor : Editor
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
-
-        GUILayout.Label("Processed data file name: " + GetPathFromProjectRoot(processor.outProcessedDataFileName));
+        EditorGUILayout.PrefixLabel("Processed data file name:");
+        GUILayout.TextField(GetPathFromProjectRoot(processor.outProcessedDataFileName));
 
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
-
-        GUILayout.Label("Summarized data file name: " + GetPathFromProjectRoot(processor.outSummarizedDataFileName));
+        EditorGUILayout.PrefixLabel("Summarized data file name:");
+        GUILayout.TextField(GetPathFromProjectRoot(processor.outSummarizedDataFileName));
 
         GUILayout.EndHorizontal();
 

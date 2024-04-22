@@ -48,8 +48,12 @@ public class ProcessWalkthrough : MonoBehaviour
     public string inSummarizedDataFileName;
     private List<Vector3> hitPositions = new();
     private List<float> kdeValues;
-    private List<int[]> hitsPerLayer;
+    private Dictionary<string, int[]> hitsPerLayer;
+
+    // Whether the visual attention heatmap should be computed.
     public bool visualizeHeatmap = false;
+
+    // Whether the trajectories should be visualized.
     public bool visualizeTrajectory = false;
     private Vector3[] particlePositions;
     public Gradient trajectoryGradient;
@@ -75,7 +79,7 @@ public class ProcessWalkthrough : MonoBehaviour
     private List<string> rawDataFileNames;
     public string csvDelimiter = ",";
     public bool generateSummarizedDataFile;
-    private string prec = "F3";
+    private readonly string outputNumberFormat = "F3";
     public bool showTrajectoryProgressively = false;
     public float replayDuration = 10.0f;
     public bool useQuaternion = false;
@@ -111,12 +115,12 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         if (useAllFilesInDirectory && multipleTrialsInOneFile)
         {
-            throw new Exception("Currently using multiple files and multiple trials in one file is not supported.");
+            throw new Exception("Using multiple files and multiple trials in one file is not supported.");
         }
         // The total number of rays cannot be smaller than the number of rays per raycast.
         if (numRaysPerRayCast > maxNumRays)
         {
-            Debug.LogError("numRaysPerRayCast must be smaller than maxNumRays.");
+            throw new Exception("numRaysPerRayCast must be smaller than maxNumRays.");
         }
 
         foreach (SerializableStringList filter in filters)
@@ -139,11 +143,13 @@ public class ProcessWalkthrough : MonoBehaviour
             heatmapMaterial = new Material(Shader.Find("Particles/Priority Additive (Soft)")); // Default material for heatmap.
         }
         
+        // Initialize hitsPerLayer.
+        hitsPerLayer = new();
+
         // Set material of particle system.
         gameObject.GetComponent<ParticleSystemRenderer>().material = heatmapMaterial;
         outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
         outerConeRadiusVertical = Mathf.Tan(verticalViewAngle / 2.0f * Mathf.Deg2Rad);
-        hitsPerLayer = new List<int[]>();
 
         // Create a list of filenames for the raw data files to be read. If <useAllFilesInDirectory> is false, then this
         // list will consist of only one file. Otherwise all files in that directory will be added.
@@ -177,12 +183,6 @@ public class ProcessWalkthrough : MonoBehaviour
                 string key = multipleTrialsInOneFile ? GetSuperKey(columnNames, row) : Path.GetFileName(fileName);
                 ParseRow(row, key, ref trajectories, columnNames);
             }
-        }
-
-        // Print the key of all trajectories.
-        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
-        {
-            Debug.Log($"Trajectory: {entry.Key}, Length: {entry.Value.Count}");
         }
 
         if (visualizeHeatmap)
@@ -311,8 +311,6 @@ public class ProcessWalkthrough : MonoBehaviour
 
     private void CreateHeatMap()
     {
-        // Unity generates 32 layers per default.
-        hitsPerLayer = new List<int[]>();
 
         // Subsample the trajectory.
 
@@ -335,18 +333,20 @@ public class ProcessWalkthrough : MonoBehaviour
         }
 
         // Sample `maxNumRays` positions uniformly (with replacement) from all the trajectories.
-        Dictionary<string, Trajectory> sampledTrajectories = new();
+        Dictionary<string, Trajectory> subsampledTrajectories = new();
         foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
-            sampledTrajectories.Add(entry.Key, new Trajectory());
+            subsampledTrajectories.Add(entry.Key, new Trajectory());
             for (int i = 0; i < numSamplesPerTrajectory[entry.Key]; i++)
             {
                 int index = UnityEngine.Random.Range(0, entry.Value.Count);
-                sampledTrajectories[entry.Key].Add(trajectories[entry.Key][index]);
+                subsampledTrajectories[entry.Key].Add(trajectories[entry.Key][index]);
             }
         }
 
-        foreach (KeyValuePair<string, Trajectory> entry in sampledTrajectories)
+        // Unity generates 32 layers per default.
+        hitsPerLayer = new();
+        foreach (KeyValuePair<string, Trajectory> entry in subsampledTrajectories)
         {
             // Compute hit positions for each trajectory.
             int[] currHitsPerLayer = new int[32];
@@ -360,7 +360,7 @@ public class ProcessWalkthrough : MonoBehaviour
                     ref currHitsPerLayer
                     )
                 );
-            hitsPerLayer.Add(currHitsPerLayer);
+            hitsPerLayer[entry.Key] = currHitsPerLayer;
         }
 
         kdeValues = Visualization.KernelDensityEstimate(hitPositions, kernelSize);
@@ -469,35 +469,44 @@ public class ProcessWalkthrough : MonoBehaviour
                 "Successful"
         };
 
-        for (int i = 0; i < hitsPerLayer[0].Length; i++)
+        // Find names of all the Unity layers.
+        for (int i = 0; i < 32; i++)
         {
             columnNames.Add(LayerMask.LayerToName(i));
         }
 
         List<List<string>> data = new();
-        List<int> totalHitsPerLayer = new();
-        for (int i = 0; i < hitsPerLayer.Count; i++)
+        Dictionary<string, int> totalHitsPerLayer = new();
+        foreach (KeyValuePair<string, int[]> entry in hitsPerLayer)
         {
-            totalHitsPerLayer.Add(hitsPerLayer[i].Sum());
+            totalHitsPerLayer[entry.Key] = visualizeHeatmap ? entry.Value.Sum() : -1;
         }
-        // foreach (KeyValuePair<string, float> entry in durations)
-        for (int i = 0; i < durations.Count; i++)
+        foreach (KeyValuePair<string, float> entry in durations)
+        // for (int i = 0; i < durations.Count; i++)
         {
-            KeyValuePair<string, float> entry = durations.ElementAt(i);
             List<string> row = new() {
-                    entry.Key,
-                    durations[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    distances[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    averageSpeeds[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    shortestPathDistances[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    surplusShortestPaths[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    ratioShortestPaths[entry.Key].ToString(prec, CultureInfo.InvariantCulture),
-                    successfuls[entry.Key].ToString(prec, CultureInfo.InvariantCulture)
-                };
+                entry.Key,
+                durations[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                distances[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                averageSpeeds[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                shortestPathDistances[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                surplusShortestPaths[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                ratioShortestPaths[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
+                successfuls[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture)
+            };
 
-            for (int j = 0; j < hitsPerLayer[i].Length; j++)
+            for (int j = 0; j < 32; j++)
             {
-                row.Add((hitsPerLayer[i][j] / totalHitsPerLayer[i]).ToString(prec, CultureInfo.InvariantCulture));
+                if (visualizeHeatmap)
+                {
+                    int numHits = hitsPerLayer[entry.Key][j];
+                    int numTotalHits = totalHitsPerLayer[entry.Key];
+                    row.Add(((float) numHits / numTotalHits).ToString(outputNumberFormat, CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    row.Add("not computed");
+                }
             }
             data.Add(row);
         }
@@ -617,14 +626,6 @@ public class ProcessWalkthrough : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="columnNames"></param>
-    /// <param name="data"></param>
-    /// <param name="filters"></param>
-    /// <returns></returns>
-    /// <summary>
     private List<List<string>> FilterData(
         List<string> columnNames,
         List<List<string>> data,
