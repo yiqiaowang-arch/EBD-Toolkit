@@ -20,6 +20,7 @@ public class ProcessWalkthroughCustomEditor : Editor
     UnityEditor.AnimatedValues.AnimBool visualizeHeatmapAnimBool;
     UnityEditor.AnimatedValues.AnimBool visualizeShortestPathBool;
     UnityEditor.AnimatedValues.AnimBool useQuaternionAnimBool;
+    UnityEditor.AnimatedValues.AnimBool singleColorPerTrajectoryAnimBool;
     ProcessWalkthrough processor;
     readonly int buttonWidth = 210;
 
@@ -31,6 +32,8 @@ public class ProcessWalkthroughCustomEditor : Editor
         visualizeShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
         useQuaternionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.useQuaternion);
         useQuaternionAnimBool.valueChanged.AddListener(Repaint);
+        singleColorPerTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.singleColorPerTrajectory);
+        singleColorPerTrajectoryAnimBool.valueChanged.AddListener(Repaint);
     }
     public override void OnInspectorGUI()
     {
@@ -50,7 +53,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         GUILayout.Label("File Input/Output", EditorStyles.boldLabel);
 
         EditorGUILayout.Space();
-        
+
         GUILayout.BeginHorizontal();
 
         // If a new directory is chosen, we need to force the user to choose a new file name as well.
@@ -236,16 +239,33 @@ public class ProcessWalkthroughCustomEditor : Editor
         if (EditorGUILayout.BeginFadeGroup(visualizeTrajectoryAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
-
-            // Gradient of the trajectory.
-            EditorGUI.BeginChangeCheck();
-            SerializedObject serializedGradient = new(target);
-            SerializedProperty colorGradient = serializedGradient.FindProperty("trajectoryGradient");
-            EditorGUILayout.PropertyField(colorGradient, true);
-            if (EditorGUI.EndChangeCheck())
+            processor.singleColorPerTrajectory = GUILayout.Toggle(processor.singleColorPerTrajectory, new GUIContent("Single Color Per Trajectory"));
+            singleColorPerTrajectoryAnimBool.target = processor.singleColorPerTrajectory;
+            if (EditorGUILayout.BeginFadeGroup(singleColorPerTrajectoryAnimBool.faded))
             {
-                serializedGradient.ApplyModifiedProperties();
+                EditorGUI.indentLevel += 2;
+                serializedObject.Update();
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("trajectoryColors"), true);
+                serializedObject.ApplyModifiedProperties();
+                EditorGUI.indentLevel -= 2;
             }
+            EditorGUILayout.EndFadeGroup();
+
+            if (EditorGUILayout.BeginFadeGroup(1.0f - singleColorPerTrajectoryAnimBool.faded))
+            {
+                EditorGUI.indentLevel += 2;
+                // Gradient of the trajectory.
+                EditorGUI.BeginChangeCheck();
+                SerializedObject serializedGradient = new(target);
+                SerializedProperty colorGradient = serializedGradient.FindProperty("trajectoryGradient");
+                EditorGUILayout.PropertyField(colorGradient, true);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    serializedGradient.ApplyModifiedProperties();
+                }
+                EditorGUI.indentLevel -= 2;
+            }
+            EditorGUILayout.EndFadeGroup();
 
             // Width of the trajectory.
             processor.pathWidth = EditorGUILayout.Slider("Trajectory Width", processor.pathWidth, 0.01f, 1.0f);

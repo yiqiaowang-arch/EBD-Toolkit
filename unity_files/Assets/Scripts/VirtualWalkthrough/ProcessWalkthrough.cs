@@ -56,6 +56,8 @@ public class ProcessWalkthrough : MonoBehaviour
     // Whether the trajectories should be visualized.
     public bool visualizeTrajectory = false;
     private Vector3[] particlePositions;
+    public bool singleColorPerTrajectory = false;
+    public SerializableColorList trajectoryColors = new SerializableColorList();
     public Gradient trajectoryGradient;
     public Gradient shortestPathGradient;
     public bool visualizeShortestPath = false;
@@ -201,6 +203,7 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         if (visualizeTrajectory)
         {
+            int trajectoryIndex = 0;
             foreach (KeyValuePair<string, Trajectory> entry in trajectories)
             {
                 List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
@@ -215,11 +218,13 @@ public class ProcessWalkthrough : MonoBehaviour
                     positions: currPositions.ToList(),
                     timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
                     progress: 1.0f,
-                    gradient: trajectoryGradient,
+                    gradient: singleColorPerTrajectory ? null : trajectoryGradient,
+                    color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
                     trajectoryWidth: pathWidth,
                     normalizeTime: true,
                     normalizePosition: false
                 );
+                trajectoryIndex++;
                 if (visualizeShortestPath)
                 {
                     Vector3 startPos = inferStartLocation ? currPositions.First() : startLocation.position;
@@ -262,22 +267,26 @@ public class ProcessWalkthrough : MonoBehaviour
 
     void Update()
     {
-        if (visualizeTrajectory & showTrajectoryProgressively)
+        if (!visualizeTrajectory || !showTrajectoryProgressively)
         {
-            foreach (KeyValuePair<string, Trajectory> entry in trajectories)
-            {
-                List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
-                List<float> currTimes = entry.Value.Select(x => x.TimeStamp).ToList();
-                Visualization.RenderTrajectory(
-                    lineRenderer: lineRenderer[entry.Key],
-                    positions: currPositions.ToList(),
-                    timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
-                    progress: Time.realtimeSinceStartup % replayDuration / replayDuration,
-                    gradient: trajectoryGradient,
-                    trajectoryWidth: pathWidth,
-                    normalizeTime: true
-                );
-            }
+            return;
+        }
+        int trajectoryIndex = 0;
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
+        {
+            List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
+            List<float> currTimes = entry.Value.Select(x => x.TimeStamp).ToList();
+            Visualization.RenderTrajectory(
+                lineRenderer: lineRenderer[entry.Key],
+                positions: currPositions.ToList(),
+                timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
+                progress: Time.realtimeSinceStartup % replayDuration / replayDuration,
+                gradient: singleColorPerTrajectory ? null : trajectoryGradient,
+                color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
+                trajectoryWidth: pathWidth,
+                normalizeTime: true
+            );
+            trajectoryIndex++;
         }
     }
 
@@ -675,4 +684,10 @@ public struct TrajectoryEntry
 public class SerializableStringList
 {
     public List<string> List;
+}
+
+[Serializable]
+public class SerializableColorList
+{
+    public List<Color> List;
 }

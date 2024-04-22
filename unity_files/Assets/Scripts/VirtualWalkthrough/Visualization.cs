@@ -14,8 +14,9 @@ namespace EBD
             List<Vector3> positions,
             List<float> timesteps,
             float progress,
-            Gradient gradient,
             float trajectoryWidth,
+            Gradient gradient = null,
+            Color color = default,
             bool normalizeTime = false,
             bool normalizePosition = false
         )
@@ -54,12 +55,6 @@ namespace EBD
                 }
             }
 
-            // Print first 100 positions.
-            for (int i = 0; i < 100; i++)
-            {
-                // Debug.Log(positions[i]);
-            }
-
             // Calculate the number of points to render.
             int numPoints = 0;
             for (int i = 0; i < timesteps.Count; i++)
@@ -68,6 +63,16 @@ namespace EBD
                 {
                     numPoints++;
                 }
+            }
+
+            // If the gradient is not provided, construct gradient from color.
+            if (gradient == null)
+            {
+                gradient = new Gradient();
+                gradient.SetKeys(
+                    new GradientColorKey[] { new GradientColorKey(color, 0.0f), new GradientColorKey(color, 1.0f) },
+                    new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(1.0f, 1.0f) }
+                );
             }
             lineRenderer.colorGradient = gradient;
             lineRenderer.material = new Material(Shader.Find("Sprites/Default"));  // Default material for linerenderer.
