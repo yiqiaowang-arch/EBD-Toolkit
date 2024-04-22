@@ -31,7 +31,7 @@ namespace EBD
             {
                 if (row.Count != columnNames.Count)
                 {
-                    throw new System.Exception("Number of column names does not match number of columns in data.");
+                    throw new System.Exception($"Number of column names ({columnNames.Count}) does not match number of columns in data ({row.Count}).");
                 }
             }
 

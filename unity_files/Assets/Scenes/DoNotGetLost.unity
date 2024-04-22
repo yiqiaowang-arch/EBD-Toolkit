@@ -492,7 +492,7 @@ MonoBehaviour:
   horizontalViewAngle: 90
   verticalViewAngle: 60
   numRaysPerRayCast: 100
-  maxNumRays: 1000
+  maxNumRays: 10000
   numRayCast: 0
   particleSize: 0.2
   kernelSize: 1
@@ -503,12 +503,15 @@ MonoBehaviour:
   outSummarizedDataFileName: Data/VirtualWalkthrough/Final/PosDataS01S02S03_final.csv
   inProcessedDataFileName: 
   inSummarizedDataFileName: 
-  visualizeHeatmap: 0
+  visualizeHeatmap: 1
   visualizeTrajectory: 1
   singleColorPerTrajectory: 1
   trajectoryColors:
-  - {r: 0, g: 0, b: 0, a: 0}
-  - {r: 0, g: 0, b: 0, a: 0}
+    List:
+    - {r: 1, g: 0.3045044, b: 0.3045044, a: 0}
+    - {r: 0.45435262, g: 0.75106114, b: 1, a: 0}
+    - {r: 0.95559347, g: 0.7171952, b: 0.34797788, a: 0}
+    - {r: 0.20901804, g: 0.85637623, b: 0.41335386, a: 0}
   trajectoryGradient:
     serializedVersion: 2
     key0: {r: 0.61960787, g: 0.003921569, b: 0.25882354, a: 1}

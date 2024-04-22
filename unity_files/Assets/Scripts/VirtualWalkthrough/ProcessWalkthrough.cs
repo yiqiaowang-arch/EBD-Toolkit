@@ -8,6 +8,7 @@ using System.Globalization;
 
 using Trajectory = System.Collections.Generic.List<TrajectoryEntry>;
 using System;
+using System.Data.Common;
 
 public class ProcessWalkthrough : MonoBehaviour
 {
@@ -182,7 +183,7 @@ public class ProcessWalkthrough : MonoBehaviour
             foreach (List<string> row in data)
             {
                 // Create the key.
-                string key = multipleTrialsInOneFile ? GetSuperKey(columnNames, row) : Path.GetFileName(fileName);
+                string key = multipleTrialsInOneFile ? CreateSuperKey(keyColumns.List, columnNames, row) : Path.GetFileName(fileName);
                 ParseRow(row, key, ref trajectories, columnNames);
             }
         }
@@ -466,9 +467,16 @@ public class ProcessWalkthrough : MonoBehaviour
                 successfuls.Add(entry.Key, 0);
             }
         }
-
-        List<string> columnNames = new() {
-                "TrialID",
+        List<string> columnNames = new();
+        if (multipleTrialsInOneFile)
+        {
+           columnNames.AddRange(keyColumns.List); 
+        }
+        else
+        {
+            columnNames.Add("TrialID");
+        }
+        columnNames.AddRange(new List<string> {
                 "Duration",
                 "Distance",
                 "AverageSpeed",
@@ -476,7 +484,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 "SurplusShortestPath",
                 "RatioShortestPath",
                 "Successful"
-        };
+        });
 
         // Find names of all the Unity layers.
         for (int i = 0; i < 32; i++)
@@ -491,10 +499,17 @@ public class ProcessWalkthrough : MonoBehaviour
             totalHitsPerLayer[entry.Key] = visualizeHeatmap ? entry.Value.Sum() : -1;
         }
         foreach (KeyValuePair<string, float> entry in durations)
-        // for (int i = 0; i < durations.Count; i++)
         {
-            List<string> row = new() {
-                entry.Key,
+            List<string> row = new();
+            if (multipleTrialsInOneFile)
+            {
+                row.AddRange(DeconstructSuperKey(entry.Key).Item2);
+            }
+            else
+            {
+                row.Add(entry.Key);
+            }
+            row.AddRange(new List<string> {
                 durations[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
                 distances[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
                 averageSpeeds[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
@@ -502,7 +517,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 surplusShortestPaths[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
                 ratioShortestPaths[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture),
                 successfuls[entry.Key].ToString(outputNumberFormat, CultureInfo.InvariantCulture)
-            };
+            });
 
             for (int j = 0; j < 32; j++)
             {
@@ -663,11 +678,24 @@ public class ProcessWalkthrough : MonoBehaviour
         return filteredData;
     }
 
-    private string GetSuperKey(List<string> columnNames, List<string> row)
+    private string CreateSuperKey(
+        List<string> keyColumns,
+        List<string> columnNames,
+        List<string> row,
+        char separator = ':'
+    )
     {
-        List<string> keyValues = keyColumns.List.Select(x => row[columnNames.IndexOf(x)]).ToList();
-        List<string> superKeyComps = keyValues.Zip(keyColumns.List, (x, y) => $"{y}={x}").ToList();
-        return string.Join("_", superKeyComps);
+        List<string> keyValues = keyColumns.Select(x => row[columnNames.IndexOf(x)]).ToList();
+        List<string> superKeyComps = keyValues.Zip(keyColumns, (x, y) => $"{y}={x}").ToList();
+        return string.Join(separator, superKeyComps);
+    }
+
+    private (List<string>, List<string>) DeconstructSuperKey(string superKey, char separator = ':')
+    {
+        List<string> keyComponents = superKey.Split(separator).ToList();
+        List<string> keyColumns = keyComponents.Select(x => x.Split("=")[0]).ToList();
+        List<string> keyValues = keyComponents.Select(x => x.Split("=")[1]).ToList();
+        return (keyColumns, keyValues);
     }
 }
 
