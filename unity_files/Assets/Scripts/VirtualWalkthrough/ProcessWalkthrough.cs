@@ -194,7 +194,15 @@ public class ProcessWalkthrough : MonoBehaviour
             }
             else
             {
-                CreateHeatMap();
+                (hitPositions, kdeValues, hitsPerLayer) = VisualAttention.CreateHeatMap(
+                    trajectories,
+                    maxNumRays,
+                    outerConeRadiusVertical,
+                    outerConeRadiusHorizontal,
+                    numRaysPerRayCast,
+                    layerMask,
+                    kernelSize
+                );
                 WriteProcessedDataFile();
             }
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();

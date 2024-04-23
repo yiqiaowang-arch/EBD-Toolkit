@@ -76,18 +76,14 @@ namespace EBD
             return true;
         }
 
-        private void CreateHeatMap(
+        public static (List<Vector3>, List<float>, Dictionary<string, int[]>) CreateHeatMap(
             Dictionary<string, Trajectory> trajectories,
-            int numRayCast,
+            int maxNumRays,
             float outerConeRadiusVertical,
             float outerConeRadiusHorizontal,
             int numRaysPerRayCast,
             LayerMask layerMask,
-            float kernelSize,
-            out Dictionary<string, int[]> hitsPerLayer,
-            out List<Vector3> hitPositions,
-            out List<float> kdeValues,
-            out Vector3[] particlePositions
+            float kernelSize
         )
         {
             // Subsample the trajectory.
@@ -99,79 +95,53 @@ namespace EBD
                 totalNumPositions += entry.Value.Count;
             }
 
-            // This is not stricly uniform sampling, but to ensure that each 
-            // trajectory is in the sample we will make sure that there is at least
-            // one sample from each trajectory.
-            Dictionary<string, int> numSamplesPerTrajectory = new();
+            // This is not stricly uniform sampling, but we need to ensure that
+            // we perform at least one ray cast per trajectory to have
+            // data for the statistics.
+            List<Vector3> hitPositions = new();
+            Dictionary<string, int[]> hitsPerLayer = new();
             foreach (KeyValuePair<string, Trajectory> entry in trajectories)
             {
                 float trajectoryProportion = (float)entry.Value.Count / totalNumPositions;
-                int numSamples = Mathf.CeilToInt(trajectoryProportion * numRayCast);
-                numSamplesPerTrajectory.Add(entry.Key, numSamples);
-            }
-
-            // Sample `maxNumRays` positions uniformly (with replacement) from all the trajectories.
-            Dictionary<string, Trajectory> subsampledTrajectories = new();
-            foreach (KeyValuePair<string, Trajectory> entry in trajectories)
-            {
-                subsampledTrajectories.Add(entry.Key, new Trajectory());
-                for (int i = 0; i < numSamplesPerTrajectory[entry.Key]; i++)
-                {
-                    int index = Random.Range(0, entry.Value.Count);
-                    subsampledTrajectories[entry.Key].Add(trajectories[entry.Key][index]);
-                }
-            }
-
-            // Unity generates 32 layers per default.
-            hitsPerLayer = new();
-            foreach (KeyValuePair<string, Trajectory> entry in subsampledTrajectories)
-            {
-                // Compute hit positions for each trajectory.
+                int currMaxNumRays = Mathf.CeilToInt(trajectoryProportion * maxNumRays);
+                Debug.Log($"currMaxNumRays={currMaxNumRays}");
+                int currNumRays = 0;
                 int[] currHitsPerLayer = new int[32];
-                hitPositions.AddRange(
-                    ComputeHitPositions(
-                        entry.Value,
+                int loopIndex = 0;
+
+                // This is the lowest number of samples we can take.
+                // This only occurs if all rays always hit.
+                int lowerBoundSamples = currMaxNumRays / numRaysPerRayCast;
+                while (currNumRays < currMaxNumRays)
+                {
+                    if (loopIndex >= 10 * lowerBoundSamples)
+                    {
+                        // This is a safety check to avoid infinite loops.
+                        Debug.LogWarning("Could not sample enough points for the heatmap.");
+                        break;
+                    }
+
+                    int index = Random.Range(0, entry.Value.Count);
+                    TrajectoryEntry trajectoryEntry = entry.Value[index];
+                    List<Vector3> hits = CastAndCollide(
+                        trajectoryEntry.Position,
+                        trajectoryEntry.ForwardDirection,
                         outerConeRadiusVertical,
                         outerConeRadiusHorizontal,
                         numRaysPerRayCast,
                         layerMask,
                         ref currHitsPerLayer
-                        )
                     );
+                    hitPositions.AddRange(hits);
+                    currNumRays += hits.Count;
+                    loopIndex++;
+                }
                 hitsPerLayer[entry.Key] = currHitsPerLayer;
             }
 
-            kdeValues = KernelDensityEstimate.Evaluate(hitPositions, hitPositions, kernelSize);
-            particlePositions = hitPositions.ToArray();
+            List<float> kdeValues = KernelDensityEstimate.Evaluate(hitPositions, hitPositions, kernelSize);
             Debug.Log($"Number of hit positions: {hitPositions.Count}");
-        }
-
-        private List<Vector3> ComputeHitPositions(
-        Trajectory trajectory,
-        float radiusVertical,
-        float radiusHorizontal,
-        int numRaysPerRaycast,
-        LayerMask layerMask,
-        ref int[] hitCountPerLayer)
-        {
-            List<Vector3> hitPositions = new();
-
-            // For each trajectory.
-            for (int j = 0; j < trajectory.Count; j++)
-            {
-                hitPositions.AddRange(
-                    VisualAttention.CastAndCollide(
-                        trajectory[j].Position,
-                        trajectory[j].ForwardDirection,
-                        radiusVertical,
-                        radiusHorizontal,
-                        numRaysPerRaycast,
-                        layerMask,
-                        ref hitCountPerLayer
-                    )
-                );
-            }
-            return hitPositions;
+            return (hitPositions, kdeValues, hitsPerLayer);
         }
     }
 }
