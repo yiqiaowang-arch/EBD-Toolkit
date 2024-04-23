@@ -200,43 +200,17 @@ public class ProcessWalkthroughCustomEditor : Editor
     private void Visualization()
     {
         HorizontalSeparator();
+
         EditorGUILayout.Space();
 
         GUILayout.Label("Visualizations", EditorStyles.boldLabel);
 
         EditorGUILayout.Space();
 
-        processor.showVisualAttention = GUILayout.Toggle(processor.showVisualAttention, "Visual Attention Heatmap");
-        showVisualAttentionAnimBool.target = processor.showVisualAttention;
-        if (EditorGUILayout.BeginFadeGroup(showVisualAttentionAnimBool.faded))
-        {
-            EditorGUI.indentLevel += 2;
-            processor.reuseHeatmap = EditorGUILayout.ToggleLeft("Use processed data file", processor.reuseHeatmap);
-            EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
-            processor.numRaysPerRayCast = EditorGUILayout.IntSlider("Rays per Raycast", processor.numRaysPerRayCast, 1, 200);
-            processor.maxNumRays = EditorGUILayout.IntSlider("Max Rays", processor.maxNumRays, 1, 1000000);
-            processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
-            processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
-
-            EditorGUI.BeginChangeCheck();
-            SerializedObject serializedHeatmapGradient = new SerializedObject(target);
-            SerializedProperty heatmapGradient = serializedHeatmapGradient.FindProperty("heatmapGradient");
-            EditorGUILayout.PropertyField(heatmapGradient, true);
-            if (EditorGUI.EndChangeCheck())
-            {
-                serializedHeatmapGradient.ApplyModifiedProperties();
-            }
-            LayerMask newMask = EditorGUILayout.MaskField("Heatmap Layers", InternalEditorUtility.LayerMaskToConcatenatedLayersMask(processor.layerMask), InternalEditorUtility.layers);
-            processor.layerMask = InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(newMask);
-            EditorGUI.EndDisabledGroup();
-            processor.heatmapMaterial = EditorGUILayout.ObjectField("Heatmap Material", processor.heatmapMaterial, typeof(Material), true) as Material;
-            EditorGUI.indentLevel -= 2;
-        }
-        EditorGUILayout.EndFadeGroup();
+        VisualAttention();
 
         EditorGUILayout.Space();
 
-        EditorGUI.BeginDisabledGroup(!processor.generateData);
         processor.showTrajectory = GUILayout.Toggle(processor.showTrajectory, new GUIContent("Trajectory"));
         showTrajectoryAnimBool.target = processor.showTrajectory;
         if (EditorGUILayout.BeginFadeGroup(showTrajectoryAnimBool.faded))
@@ -340,11 +314,40 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUILayout.EndFadeGroup();
         }
         EditorGUILayout.EndFadeGroup();
-        EditorGUI.EndDisabledGroup();
 
         EditorGUILayout.Space();
     }
     
+    private void VisualAttention()
+    {
+        processor.showVisualAttention = GUILayout.Toggle(processor.showVisualAttention, "Visual Attention Heatmap");
+        showVisualAttentionAnimBool.target = processor.showVisualAttention;
+        if (EditorGUILayout.BeginFadeGroup(showVisualAttentionAnimBool.faded))
+        {
+            EditorGUI.indentLevel += 2;
+            processor.reuseHeatmap = EditorGUILayout.ToggleLeft("Use processed data file", processor.reuseHeatmap);
+            EditorGUI.BeginDisabledGroup(processor.reuseHeatmap);
+            processor.numRaysPerRayCast = EditorGUILayout.IntSlider("Rays per Raycast", processor.numRaysPerRayCast, 1, 200);
+            processor.maxNumRays = EditorGUILayout.IntSlider("Max Rays", processor.maxNumRays, 1, 1000000);
+            processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
+            processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
+
+            EditorGUI.BeginChangeCheck();
+            SerializedObject serializedHeatmapGradient = new SerializedObject(target);
+            SerializedProperty heatmapGradient = serializedHeatmapGradient.FindProperty("heatmapGradient");
+            EditorGUILayout.PropertyField(heatmapGradient, true);
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedHeatmapGradient.ApplyModifiedProperties();
+            }
+            LayerMask newMask = EditorGUILayout.MaskField("Heatmap Layers", InternalEditorUtility.LayerMaskToConcatenatedLayersMask(processor.layerMask), InternalEditorUtility.layers);
+            processor.layerMask = InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(newMask);
+            EditorGUI.EndDisabledGroup();
+            processor.heatmapMaterial = EditorGUILayout.ObjectField("Heatmap Material", processor.heatmapMaterial, typeof(Material), true) as Material;
+            EditorGUI.indentLevel -= 2;
+        }
+        EditorGUILayout.EndFadeGroup();
+    }
     private void Summary()
     {
         HorizontalSeparator();

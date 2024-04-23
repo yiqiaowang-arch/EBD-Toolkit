@@ -13,15 +13,6 @@ public class ProcessWalkthrough : MonoBehaviour
     // Public variables.
     public LayerMask layerMask;
     public Gradient heatmapGradient;
-    public bool generateData = true;
-
-    // IO-related public variables.
-    public string inPathWalkthrough;
-    public string inPathHeatmapData;
-    public string outDirHeatmap;
-    public string outFileNameHeatmap;
-    public string outDirStatistic;
-    public string outFileNameStatistic;
 
     // Public variables concerned with the raycast.
     public float horizontalViewAngle = 90.0f;
