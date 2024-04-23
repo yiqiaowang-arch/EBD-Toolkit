@@ -35,7 +35,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         useQuaternionAnimBool.valueChanged.AddListener(Repaint);
         singleColorPerTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.singleColorPerTrajectory);
         singleColorPerTrajectoryAnimBool.valueChanged.AddListener(Repaint);
-        showPositionHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showPositionHeatmap);
+        showPositionHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showDensityHeatmap);
         showPositionHeatmapAnimBool.valueChanged.AddListener(Repaint);
     }
     public override void OnInspectorGUI()
@@ -214,7 +214,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         EditorGUILayout.Space();
 
-        PositionHeatmap();
+        DensityHeatmap();
 
         EditorGUILayout.Space();
 
@@ -254,14 +254,14 @@ public class ProcessWalkthroughCustomEditor : Editor
         EditorGUILayout.EndFadeGroup();
     }
 
-    private void PositionHeatmap()
+    private void DensityHeatmap()
     {
-        processor.showPositionHeatmap = GUILayout.Toggle(processor.showPositionHeatmap, "Position Heatmap");
-        showPositionHeatmapAnimBool.target = processor.showPositionHeatmap;
+        processor.showDensityHeatmap = GUILayout.Toggle(processor.showDensityHeatmap, "Position Density Heatmap");
+        showPositionHeatmapAnimBool.target = processor.showDensityHeatmap;
         if (EditorGUILayout.BeginFadeGroup(showPositionHeatmapAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
-            processor.positionHeatmapDelta = EditorGUILayout.FloatField("Position Heatmap Delta", processor.positionHeatmapDelta);
+            processor.densityHeatmapDelta = EditorGUILayout.FloatField("Position Heatmap Delta", processor.densityHeatmapDelta);
             processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
             processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
             serializedObject.Update();

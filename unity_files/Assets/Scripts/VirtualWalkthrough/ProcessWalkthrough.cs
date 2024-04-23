@@ -46,9 +46,9 @@ public class ProcessWalkthrough : MonoBehaviour
     public bool showTrajectory = false;
 
     // Whether the position heatmap should be computed (mutually exclusive with showVisualAttention).
-    public bool showPositionHeatmap = false;
-    public float positionHeatmapDelta = 1f;
-    public SerializableColorList positionHeatmapColors = new SerializableColorList();
+    public bool showDensityHeatmap = false;
+    public float densityHeatmapDelta = 1f;
+    public SerializableColorList densityHeatmapColors = new SerializableColorList();
     private Vector3[] particlePositions;
     public bool singleColorPerTrajectory = false;
     public SerializableColorList trajectoryColors = new SerializableColorList();
@@ -140,7 +140,7 @@ public class ProcessWalkthrough : MonoBehaviour
         }
         
         // Check that only one of showVisualAttention and showPositionHeatmap is set to true.
-        if (showVisualAttention && showPositionHeatmap)
+        if (showVisualAttention && showDensityHeatmap)
         {
             Debug.LogError("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
             throw new Exception("Only one of showVisualAttention and showPositionHeatmap can be set to true.");

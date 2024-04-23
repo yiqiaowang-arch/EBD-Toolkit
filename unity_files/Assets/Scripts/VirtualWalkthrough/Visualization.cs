@@ -102,6 +102,27 @@ namespace EBD
             particleSystem.SetParticles(particles, particles.Length, 0);
         }
 
+        public static void SetupParticleSystem(
+            ParticleSystem particleSystem,
+            List<Vector3> particlePositions,
+            List<Color> particleColors,
+            float particleSize
+        )
+        {
+            var partSysMain = particleSystem.main;
+            partSysMain.maxParticles = particlePositions.Count;
+            ParticleSystem.Particle[] particles = new ParticleSystem.Particle[particlePositions.Count];
+            particleSystem.GetParticles(particles, particles.Length, 0);
+            for (int i = 0; i < particles.Length; i++)
+            {
+                particles[i].position = particlePositions[i];
+                particles[i].velocity = Vector3.zero;
+                particles[i].startSize = particleSize;
+                particles[i].startColor = particleColors[i];
+            }
+            particleSystem.SetParticles(particles, particles.Length, 0);
+        }
+
         public static void AddTMProLabel(
             string titleText,
             float fontSize,
