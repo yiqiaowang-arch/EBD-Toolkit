@@ -265,7 +265,7 @@ public class ProcessWalkthroughCustomEditor : Editor
             processor.particleSize = EditorGUILayout.Slider("Particle Size", processor.particleSize, 0.1f, 5.0f);
             processor.kernelSize = EditorGUILayout.Slider("Kernel Size", processor.kernelSize, 0.1f, 10.0f);
             serializedObject.Update();
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("positionHeatmapColors"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("densityHeatmapColors"), true);
             serializedObject.ApplyModifiedProperties();
             processor.heatmapMaterial = EditorGUILayout.ObjectField("Heatmap Material", processor.heatmapMaterial, typeof(Material), true) as Material;
             EditorGUI.indentLevel -= 2;

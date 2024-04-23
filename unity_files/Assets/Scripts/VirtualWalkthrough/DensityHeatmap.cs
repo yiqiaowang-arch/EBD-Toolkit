@@ -75,7 +75,8 @@ namespace EBD
             Dictionary<string, Trajectory> trajectories,
             List<Color> trajectoryColors,
             float spatialDelta,
-            float bandwidth
+            float bandwidth,
+            float densityThreshold = 0.1f
         )
         {
             (Vector3 minPoint, Vector3 maxPoint) = GetBounds(trajectories);
@@ -87,15 +88,30 @@ namespace EBD
             {
                 List<Vector3> data = entry.Value.Select(e => e.Position).ToList();
                 List<float> densities = KernelDensityEstimate.Evaluate(data, queryPoints, bandwidth);
-                particlePoints.AddRange(queryPoints);
+                
+                // Remove points with density below threshold.
+                List<Vector3> filteredQueryPoints = new();
+                List<float> filteredDensities = new();
+                for (int i = 0; i < densities.Count; i++)
+                {
+                    if (densities[i] > densityThreshold)
+                    {
+                        filteredQueryPoints.Add(queryPoints[i]);
+                        filteredDensities.Add(densities[i]);
+                    }
+                }
+
+                particlePoints.AddRange(filteredQueryPoints);
 
                 // Create color per sample
                 Gradient gradient = GradientPerTrajectory(trajectoryColors[trajectoryIndex % trajectoryColors.Count]);
 
-                for (int i = 0; i < densities.Count; i++)
+                for (int i = 0; i < filteredDensities.Count; i++)
                 {
-                    colors.Add(gradient.Evaluate(densities[i]));
+                    colors.Add(gradient.Evaluate(filteredDensities[i]));
                 }
+
+                trajectoryIndex++;
             }
             return (particlePoints, colors);
         }

@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.99999946, g: 0.99999946, b: 0.99999946, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -482,17 +482,10 @@ MonoBehaviour:
     m_ColorSpace: -1
     m_NumColorKeys: 8
     m_NumAlphaKeys: 2
-  generateData: 1
-  inPathWalkthrough: 
-  inPathHeatmapData: 
-  outDirHeatmap: 
-  outFileNameHeatmap: 
-  outDirStatistic: 
-  outFileNameStatistic: 
   horizontalViewAngle: 90
   verticalViewAngle: 60
-  numRaysPerRayCast: 100
-  maxNumRays: 10000
+  numRaysPerRayCast: 10
+  maxNumRays: 20000
   numRayCast: 0
   particleSize: 0.2
   kernelSize: 1
@@ -502,9 +495,14 @@ MonoBehaviour:
   outProcessedDataFileName: Data/VirtualWalkthrough/Processed/PosDataS01S02S03_processed.csv
   outSummarizedDataFileName: Data/VirtualWalkthrough/Final/PosDataS01S02S03_final.csv
   inProcessedDataFileName: 
-  inSummarizedDataFileName: 
-  visualizeHeatmap: 1
-  visualizeTrajectory: 1
+  showVisualAttention: 0
+  showTrajectory: 0
+  showDensityHeatmap: 1
+  densityHeatmapDelta: 10
+  densityHeatmapColors:
+    List:
+    - {r: 1, g: 0, b: 0, a: 0}
+    - {r: 0.11137152, g: 1, b: 0, a: 0}
   singleColorPerTrajectory: 1
   trajectoryColors:
     List:
@@ -607,7 +605,6 @@ MonoBehaviour:
   multipleTrialsInOneFile: 1
   keyColumns:
     List:
-    - Trial_id
     - VPN_id
   filters: []
 --- !u!4 &1800723568

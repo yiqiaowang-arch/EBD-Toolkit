@@ -218,6 +218,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 densityHeatmapDelta,
                 kernelSize
             );
+            Debug.Log($"Number of particles: {particlePositions.Count}.");
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();
             Visualization.SetupParticleSystem(particleSystem, particlePositions, outColors, particleSize);
         }
