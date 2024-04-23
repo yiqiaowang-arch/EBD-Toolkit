@@ -35,7 +35,6 @@ public class ProcessWalkthrough : MonoBehaviour
     public string outProcessedDataFileName;
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;
-    public string inSummarizedDataFileName;
     private List<Vector3> hitPositions = new();
     private List<float> kdeValues;
     private Dictionary<string, int[]> hitsPerLayer;
@@ -48,6 +47,8 @@ public class ProcessWalkthrough : MonoBehaviour
 
     // Whether the position heatmap should be computed (mutually exclusive with showVisualAttention).
     public bool showPositionHeatmap = false;
+    public float positionHeatmapDelta = 1f;
+    public SerializableColorList positionHeatmapColors = new SerializableColorList();
     private Vector3[] particlePositions;
     public bool singleColorPerTrajectory = false;
     public SerializableColorList trajectoryColors = new SerializableColorList();
