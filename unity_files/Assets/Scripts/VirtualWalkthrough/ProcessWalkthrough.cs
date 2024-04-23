@@ -49,7 +49,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public bool showDensityHeatmap = false;
     public float densityHeatmapDelta = 1f;
     public SerializableColorList densityHeatmapColors = new SerializableColorList();
-    private Vector3[] particlePositions;
+    private List<Vector3> particlePositions;
     public bool singleColorPerTrajectory = false;
     public SerializableColorList trajectoryColors = new SerializableColorList();
     public Gradient trajectoryGradient;
@@ -209,6 +209,19 @@ public class ProcessWalkthrough : MonoBehaviour
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();
             Visualization.SetupParticleSystem(particleSystem, hitPositions, kdeValues, heatmapGradient, particleSize);
         }
+
+        if (showDensityHeatmap)
+        {
+            List<Color> outColors = new();
+            (particlePositions, outColors) = DensityHeatmap.GenerateDensityHeatmap(
+                trajectories,
+                densityHeatmapColors.List,
+                densityHeatmapDelta,
+                kernelSize
+            );
+            ParticleSystem particleSystem = GetComponent<ParticleSystem>();
+            Visualization.SetupParticleSystem(particleSystem, particlePositions, outColors, particleSize);
+        }
         if (showTrajectory)
         {
             int trajectoryIndex = 0;
@@ -297,18 +310,19 @@ public class ProcessWalkthrough : MonoBehaviour
             trajectoryIndex++;
         }
     }
-
+    
+    // This function is probably defunct.
     private void LoadHeatMap()
     {
         // Reading in the heatmap-data from prior processing and creating arrays for positions and colors \in [0, 1].
         string[] allLines = File.ReadAllLines(inProcessedDataFileName);
-        particlePositions = new Vector3[allLines.Length];
+        particlePositions = new();
         kdeValues = new List<float>();
         for (int i = 0; i < allLines.Length; i++)
         {
             string[] line = allLines[i].Split(csvDelimiter);
-            particlePositions[i] = new Vector3(float.Parse(line[0]), float.Parse(line[1]), float.Parse(line[2]));
-            kdeValues[i] = float.Parse(line[3]);
+            particlePositions.Add(new Vector3(float.Parse(line[0]), float.Parse(line[1]), float.Parse(line[2])));
+            kdeValues.Add(float.Parse(line[3]));
         }
     }
 
@@ -316,9 +330,9 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         using (StreamWriter processedDataFile = new StreamWriter(outProcessedDataFileName))
         {
-            for (int i = 0; i < hitPositions.Count; i++)
+            for (int i = 0; i < particlePositions.Count; i++)
             {
-                processedDataFile.WriteLine(hitPositions[i].x + csvDelimiter + hitPositions[i].y + csvDelimiter + hitPositions[i].z + kdeValues[i]);
+                processedDataFile.WriteLine(particlePositions[i].x + csvDelimiter + particlePositions[i].y + csvDelimiter + particlePositions[i].z + csvDelimiter + kdeValues[i]);
             }
         }
     }
