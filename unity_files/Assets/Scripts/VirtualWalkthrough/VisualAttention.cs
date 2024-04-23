@@ -104,7 +104,11 @@ namespace EBD
             {
                 float trajectoryProportion = (float)entry.Value.Count / totalNumPositions;
                 int currMaxNumRays = Mathf.CeilToInt(trajectoryProportion * maxNumRays);
-                Debug.Log($"currMaxNumRays={currMaxNumRays}");
+                if (currMaxNumRays < numRaysPerRayCast)
+                {
+                    Debug.LogError("Number of rays per ray cast is larger than the total number of rays. Consider increasing the number of rays or decreasing the number of rays per ray cast.");
+                    currMaxNumRays = numRaysPerRayCast;
+                }
                 int currNumRays = 0;
                 int[] currHitsPerLayer = new int[32];
                 int loopIndex = 0;
@@ -117,7 +121,7 @@ namespace EBD
                     if (loopIndex >= 10 * lowerBoundSamples)
                     {
                         // This is a safety check to avoid infinite loops.
-                        Debug.LogWarning("Could not sample enough points for the heatmap.");
+                        Debug.LogError("Probably an infinite loop. Make sure environment has colliders and the layer mask is set correctly.");
                         break;
                     }
 

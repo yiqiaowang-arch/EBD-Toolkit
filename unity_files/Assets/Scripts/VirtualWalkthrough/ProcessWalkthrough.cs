@@ -50,10 +50,13 @@ public class ProcessWalkthrough : MonoBehaviour
     private Dictionary<string, int[]> hitsPerLayer;
 
     // Whether the visual attention heatmap should be computed.
-    public bool visualizeHeatmap = false;
+    public bool showVisualAttention = false;
 
     // Whether the trajectories should be visualized.
-    public bool visualizeTrajectory = false;
+    public bool showTrajectory = false;
+
+    // Whether the position heatmap should be computed (mutually exclusive with showVisualAttention).
+    public bool showPositionHeatmap = false;
     private Vector3[] particlePositions;
     public bool singleColorPerTrajectory = false;
     public SerializableColorList trajectoryColors = new SerializableColorList();
@@ -144,6 +147,12 @@ public class ProcessWalkthrough : MonoBehaviour
             heatmapMaterial = new Material(Shader.Find("Particles/Priority Additive (Soft)")); // Default material for heatmap.
         }
         
+        // Check that only one of showVisualAttention and showPositionHeatmap is set to true.
+        if (showVisualAttention && showPositionHeatmap)
+        {
+            Debug.LogError("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
+            throw new Exception("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
+        }
         // Initialize hitsPerLayer.
         hitsPerLayer = new();
 
@@ -186,7 +195,7 @@ public class ProcessWalkthrough : MonoBehaviour
             }
         }
 
-        if (visualizeHeatmap)
+        if (showVisualAttention)
         {
             if (reuseHeatmap)
             {
@@ -208,7 +217,7 @@ public class ProcessWalkthrough : MonoBehaviour
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();
             Visualization.SetupParticleSystem(particleSystem, hitPositions, kdeValues, heatmapGradient, particleSize);
         }
-        if (visualizeTrajectory)
+        if (showTrajectory)
         {
             int trajectoryIndex = 0;
             foreach (KeyValuePair<string, Trajectory> entry in trajectories)
@@ -274,7 +283,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
     void Update()
     {
-        if (!visualizeTrajectory || !showTrajectoryProgressively)
+        if (!showTrajectory || !showTrajectoryProgressively)
         {
             return;
         }
@@ -416,7 +425,7 @@ public class ProcessWalkthrough : MonoBehaviour
         Dictionary<string, int> totalHitsPerLayer = new();
         foreach (KeyValuePair<string, int[]> entry in hitsPerLayer)
         {
-            totalHitsPerLayer[entry.Key] = visualizeHeatmap ? entry.Value.Sum() : -1;
+            totalHitsPerLayer[entry.Key] = showVisualAttention ? entry.Value.Sum() : -1;
         }
         foreach (KeyValuePair<string, float> entry in durations)
         {
@@ -441,7 +450,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
             for (int j = 0; j < 32; j++)
             {
-                if (visualizeHeatmap)
+                if (showVisualAttention)
                 {
                     int numHits = hitsPerLayer[entry.Key][j];
                     int numTotalHits = totalHitsPerLayer[entry.Key];

@@ -16,9 +16,9 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     // This directory contains statistics about the trajectory.
     string defaultFinalDataPath = Path.Combine("Data", "VirtualWalkthrough", "Final");
-    UnityEditor.AnimatedValues.AnimBool visualizeTrajectoryAnimBool;
-    UnityEditor.AnimatedValues.AnimBool visualizeHeatmapAnimBool;
-    UnityEditor.AnimatedValues.AnimBool visualizeShortestPathBool;
+    UnityEditor.AnimatedValues.AnimBool showTrajectoryAnimBool;
+    UnityEditor.AnimatedValues.AnimBool showVisualAttentionAnimBool;
+    UnityEditor.AnimatedValues.AnimBool showShortestPathBool;
     UnityEditor.AnimatedValues.AnimBool useQuaternionAnimBool;
     UnityEditor.AnimatedValues.AnimBool singleColorPerTrajectoryAnimBool;
     ProcessWalkthrough processor;
@@ -27,9 +27,9 @@ public class ProcessWalkthroughCustomEditor : Editor
     private void OnEnable()
     {
         processor = (ProcessWalkthrough)target;
-        visualizeTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeTrajectory);
-        visualizeHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeHeatmap);
-        visualizeShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
+        showTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showTrajectory);
+        showVisualAttentionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showVisualAttention);
+        showShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
         useQuaternionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.useQuaternion);
         useQuaternionAnimBool.valueChanged.AddListener(Repaint);
         singleColorPerTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.singleColorPerTrajectory);
@@ -40,14 +40,24 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         EditorGUILayout.Space();
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                                                                                            //
-        // File IO                                                                                                    //
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Choosing the input and output files.
+        FileIO();
 
-        HorizontalSeperator();
+        // Filtering data, choosing key columns.
+        DataPreprocessing();
 
+        // Which visualizations should be shown their configuration.
+        Visualization();
+
+        // Create a summary file.
+        Summary();
+
+        EditorGUILayout.Space();
+    }
+
+    private void FileIO()
+    {
+        HorizontalSeparator();
         EditorGUILayout.Space();
 
         GUILayout.Label("File Input/Output", EditorStyles.boldLabel);
@@ -170,14 +180,11 @@ public class ProcessWalkthroughCustomEditor : Editor
         processor.csvDelimiter = EditorGUILayout.TextField("CSV Delimiter", processor.csvDelimiter);
 
         EditorGUILayout.Space();
+    }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///                                                                                                           //
-        /// Data Processing                                                                                           //
-        ///                                                                                                           //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        HorizontalSeperator();
+    private void DataPreprocessing()
+    {
+        HorizontalSeparator();
 
         EditorGUILayout.Space();
 
@@ -188,24 +195,20 @@ public class ProcessWalkthroughCustomEditor : Editor
         serializedObject.Update();
         EditorGUILayout.PropertyField(serializedObject.FindProperty("filters"), true);
         serializedObject.ApplyModifiedProperties();
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                                                                                            //
-        // Visualization                                                                                              //
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        HorizontalSeperator();
-
+    }
+    
+    private void Visualization()
+    {
+        HorizontalSeparator();
         EditorGUILayout.Space();
 
         GUILayout.Label("Visualizations", EditorStyles.boldLabel);
 
         EditorGUILayout.Space();
 
-        processor.visualizeHeatmap = GUILayout.Toggle(processor.visualizeHeatmap, " Heatmap");
-        visualizeHeatmapAnimBool.target = processor.visualizeHeatmap;
-        if (EditorGUILayout.BeginFadeGroup(visualizeHeatmapAnimBool.faded))
+        processor.showVisualAttention = GUILayout.Toggle(processor.showVisualAttention, "Visual Attention Heatmap");
+        showVisualAttentionAnimBool.target = processor.showVisualAttention;
+        if (EditorGUILayout.BeginFadeGroup(showVisualAttentionAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
             processor.reuseHeatmap = EditorGUILayout.ToggleLeft("Use processed data file", processor.reuseHeatmap);
@@ -234,9 +237,9 @@ public class ProcessWalkthroughCustomEditor : Editor
         EditorGUILayout.Space();
 
         EditorGUI.BeginDisabledGroup(!processor.generateData);
-        processor.visualizeTrajectory = GUILayout.Toggle(processor.visualizeTrajectory, new GUIContent("Trajectory"));
-        visualizeTrajectoryAnimBool.target = processor.visualizeTrajectory;
-        if (EditorGUILayout.BeginFadeGroup(visualizeTrajectoryAnimBool.faded))
+        processor.showTrajectory = GUILayout.Toggle(processor.showTrajectory, new GUIContent("Trajectory"));
+        showTrajectoryAnimBool.target = processor.showTrajectory;
+        if (EditorGUILayout.BeginFadeGroup(showTrajectoryAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
             processor.singleColorPerTrajectory = GUILayout.Toggle(processor.singleColorPerTrajectory, new GUIContent("Single Color Per Trajectory"));
@@ -287,8 +290,8 @@ public class ProcessWalkthroughCustomEditor : Editor
 
             // Should shortest path be visualized?
             processor.visualizeShortestPath = EditorGUILayout.ToggleLeft("Visualize Shortest Path", processor.visualizeShortestPath);
-            visualizeShortestPathBool.target = processor.visualizeShortestPath;
-            if (EditorGUILayout.BeginFadeGroup(visualizeShortestPathBool.faded))
+            showShortestPathBool.target = processor.visualizeShortestPath;
+            if (EditorGUILayout.BeginFadeGroup(showShortestPathBool.faded))
             {
                 EditorGUI.indentLevel += 2;
 
@@ -340,26 +343,19 @@ public class ProcessWalkthroughCustomEditor : Editor
         EditorGUI.EndDisabledGroup();
 
         EditorGUILayout.Space();
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                                                                                            //
-        // Summary                                                                                                    //
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        HorizontalSeperator();
-
-        EditorGUILayout.Space();
-
-        EditorGUI.BeginDisabledGroup(!processor.visualizeHeatmap);
+    }
+    
+    private void Summary()
+    {
+        HorizontalSeparator();
+        EditorGUI.BeginDisabledGroup(!processor.showVisualAttention);
         processor.generateSummarizedDataFile = EditorGUILayout.Toggle(
             new GUIContent("Generate Summary", "Enable \"Visualize Heatmap\" to generate summary"),
             processor.generateSummarizedDataFile
         );
         EditorGUI.EndDisabledGroup();
     }
-
-    private void HorizontalSeperator()
+    private void HorizontalSeparator()
     {
         EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, 1), Color.gray);
     }
