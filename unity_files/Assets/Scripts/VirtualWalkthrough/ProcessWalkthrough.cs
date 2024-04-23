@@ -35,7 +35,6 @@ public class ProcessWalkthrough : MonoBehaviour
     public string outProcessedDataFileName;
     public string outSummarizedDataFileName;
     public string inProcessedDataFileName;
-    private List<Vector3> hitPositions = new();
     private List<float> kdeValues;
     private Dictionary<string, int[]> hitsPerLayer;
 
@@ -195,7 +194,7 @@ public class ProcessWalkthrough : MonoBehaviour
             }
             else
             {
-                (hitPositions, kdeValues, hitsPerLayer) = VisualAttention.CreateHeatMap(
+                (particlePositions, kdeValues, hitsPerLayer) = VisualAttention.CreateHeatMap(
                     trajectories,
                     maxNumRays,
                     outerConeRadiusVertical,
@@ -207,7 +206,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 WriteProcessedDataFile();
             }
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();
-            Visualization.SetupParticleSystem(particleSystem, hitPositions, kdeValues, heatmapGradient, particleSize);
+            Visualization.SetupParticleSystem(particleSystem, particlePositions, kdeValues, heatmapGradient, particleSize);
         }
 
         if (showDensityHeatmap)
