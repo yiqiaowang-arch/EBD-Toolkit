@@ -28,14 +28,14 @@ public class ProcessWalkthroughCustomEditor : Editor
     private void OnEnable()
     {
         processor = (ProcessWalkthrough)target;
-        showTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showTrajectory);
-        showVisualAttentionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showVisualAttention);
-        showShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.visualizeShortestPath);
+        showTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.isTrajectoryVisEnabled);
+        showVisualAttentionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.isVisualAttentionEnabled);
+        showShortestPathBool = new UnityEditor.AnimatedValues.AnimBool(processor.isShortestPathVisEnabled);
         useQuaternionAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.useQuaternion);
         useQuaternionAnimBool.valueChanged.AddListener(Repaint);
         singleColorPerTrajectoryAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.singleColorPerTrajectory);
         singleColorPerTrajectoryAnimBool.valueChanged.AddListener(Repaint);
-        showPositionHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.showDensityHeatmap);
+        showPositionHeatmapAnimBool = new UnityEditor.AnimatedValues.AnimBool(processor.isDensityHeatmapEnabled);
         showPositionHeatmapAnimBool.valueChanged.AddListener(Repaint);
     }
     public override void OnInspectorGUI()
@@ -225,8 +225,8 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     private void VisualAttention()
     {
-        processor.showVisualAttention = GUILayout.Toggle(processor.showVisualAttention, "Visual Attention Heatmap");
-        showVisualAttentionAnimBool.target = processor.showVisualAttention;
+        processor.isVisualAttentionEnabled = GUILayout.Toggle(processor.isVisualAttentionEnabled, "Visual Attention Heatmap");
+        showVisualAttentionAnimBool.target = processor.isVisualAttentionEnabled;
         if (EditorGUILayout.BeginFadeGroup(showVisualAttentionAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
@@ -256,8 +256,8 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     private void DensityHeatmap()
     {
-        processor.showDensityHeatmap = GUILayout.Toggle(processor.showDensityHeatmap, "Position Density Heatmap");
-        showPositionHeatmapAnimBool.target = processor.showDensityHeatmap;
+        processor.isDensityHeatmapEnabled = GUILayout.Toggle(processor.isDensityHeatmapEnabled, "Position Density Heatmap");
+        showPositionHeatmapAnimBool.target = processor.isDensityHeatmapEnabled;
         if (EditorGUILayout.BeginFadeGroup(showPositionHeatmapAnimBool.faded))
         {
             EditorGUI.indentLevel += 2;
@@ -275,8 +275,8 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     private void Trajectory()
     {
-        processor.showTrajectory = GUILayout.Toggle(processor.showTrajectory, new GUIContent("Trajectory"));
-        showTrajectoryAnimBool.target = processor.showTrajectory;
+        processor.isTrajectoryVisEnabled = GUILayout.Toggle(processor.isTrajectoryVisEnabled, new GUIContent("Trajectory"));
+        showTrajectoryAnimBool.target = processor.isTrajectoryVisEnabled;
         if (EditorGUILayout.BeginFadeGroup(showTrajectoryAnimBool.faded))
         {
             processor.singleColorPerTrajectory = GUILayout.Toggle(processor.singleColorPerTrajectory, new GUIContent("Single Color Per Trajectory"));
@@ -326,8 +326,8 @@ public class ProcessWalkthroughCustomEditor : Editor
             EditorGUI.indentLevel -= 2;
 
             // Should shortest path be visualized?
-            processor.visualizeShortestPath = EditorGUILayout.ToggleLeft("Visualize Shortest Path", processor.visualizeShortestPath);
-            showShortestPathBool.target = processor.visualizeShortestPath;
+            processor.isShortestPathVisEnabled = EditorGUILayout.ToggleLeft("Visualize Shortest Path", processor.isShortestPathVisEnabled);
+            showShortestPathBool.target = processor.isShortestPathVisEnabled;
             if (EditorGUILayout.BeginFadeGroup(showShortestPathBool.faded))
             {
                 EditorGUI.indentLevel += 2;
@@ -380,10 +380,10 @@ public class ProcessWalkthroughCustomEditor : Editor
     private void Summary()
     {
         HorizontalSeparator();
-        EditorGUI.BeginDisabledGroup(!processor.showVisualAttention);
-        processor.generateSummarizedDataFile = EditorGUILayout.Toggle(
+        EditorGUI.BeginDisabledGroup(!processor.isVisualAttentionEnabled);
+        processor.isDataSummaryEnabled = EditorGUILayout.Toggle(
             new GUIContent("Generate Summary", "Enable \"Visualize Heatmap\" to generate summary"),
-            processor.generateSummarizedDataFile
+            processor.isDataSummaryEnabled
         );
         EditorGUI.EndDisabledGroup();
     }

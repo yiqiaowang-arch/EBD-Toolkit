@@ -39,13 +39,13 @@ public class ProcessWalkthrough : MonoBehaviour
     private Dictionary<string, int[]> hitsPerLayer;
 
     // Whether the visual attention heatmap should be computed.
-    public bool showVisualAttention = false;
+    public bool isVisualAttentionEnabled = false;
 
     // Whether the trajectories should be visualized.
-    public bool showTrajectory = false;
+    public bool isTrajectoryVisEnabled = false;
 
     // Whether the position heatmap should be computed (mutually exclusive with showVisualAttention).
-    public bool showDensityHeatmap = false;
+    public bool isDensityHeatmapEnabled = false;
     public float densityHeatmapDelta = 1f;
     public SerializableColorList densityHeatmapColors = new SerializableColorList();
     private List<Vector3> particlePositions;
@@ -53,7 +53,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public SerializableColorList trajectoryColors = new SerializableColorList();
     public Gradient trajectoryGradient;
     public Gradient shortestPathGradient;
-    public bool visualizeShortestPath = false;
+    public bool isShortestPathVisEnabled = false;
     public bool inferStartLocation = true;
     public bool inferEndLocation = true;
     public Transform startLocation;
@@ -73,7 +73,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public Material heatmapMaterial;
     private List<string> rawDataFileNames;
     public string csvDelimiter = ",";
-    public bool generateSummarizedDataFile;
+    public bool isDataSummaryEnabled;
     private readonly string outputNumberFormat = "F3";
     public bool showTrajectoryProgressively = false;
     public float replayDuration = 10.0f;
@@ -110,137 +110,20 @@ public class ProcessWalkthrough : MonoBehaviour
     {
         ValidateInputs();
         Initialize();
-
-        // Create a list of filenames for the raw data files to be read. If <useAllFilesInDirectory> is false, then this
-        // list will consist of only one file. Otherwise all files in that directory will be added.
-        rawDataFileNames = new List<string>();
-        if (useAllFilesInDirectory)
+        ReadData();
+        if (isVisualAttentionEnabled)
         {
-            // Read in all files in the directory.
-            rawDataFileNames = new List<string>(Directory.GetFiles(rawDataDirectory, "*.csv"));
+            VisualizeAttention();
         }
-        else
+        if (isDensityHeatmapEnabled)
         {
-            // Only get single file.
-            rawDataFileNames.Add(rawDataFileName);
+            VisualizeDensityHeatmap();
         }
-
-        // Parse each file and populate the positions and direction arrays.
-        foreach (string fileName in rawDataFileNames)
+        if (isTrajectoryVisEnabled)
         {
-            (List<string> columnNames, List<List<string>> data) = IO.ReadCSV(fileName, separator: csvDelimiter);
-
-            // Filter data.
-            data = FilterData(columnNames, data, filters.Select(x => (x.List.First(), x.List.Skip(1).ToList())).ToList());
-
-            // Check that all required columns are present.
-            CheckColumns(columnNames);
-
-            // Parse the data and populate the positions and direction arrays.
-            foreach (List<string> row in data)
-            {
-                // Create the key.
-                string key = multipleTrialsInOneFile ? CreateSuperKey(keyColumns.List, columnNames, row) : Path.GetFileName(fileName);
-                ParseRow(row, key, ref trajectories, columnNames);
-            }
+            VisualizeTrajectory();
         }
-
-        if (showVisualAttention)
-        {
-            if (reuseHeatmap)
-            {
-                LoadHeatMap();
-            }
-            else
-            {
-                (particlePositions, kdeValues, hitsPerLayer) = VisualAttention.CreateHeatMap(
-                    trajectories,
-                    maxNumRays,
-                    outerConeRadiusVertical,
-                    outerConeRadiusHorizontal,
-                    numRaysPerRayCast,
-                    layerMask,
-                    kernelSize
-                );
-                WriteProcessedDataFile();
-            }
-            ParticleSystem particleSystem = GetComponent<ParticleSystem>();
-            Visualization.SetupParticleSystem(particleSystem, particlePositions, kdeValues, heatmapGradient, particleSize);
-        }
-
-        if (showDensityHeatmap)
-        {
-            List<Color> outColors = new();
-            (particlePositions, outColors) = DensityHeatmap.GenerateDensityHeatmap(
-                trajectories,
-                densityHeatmapColors.List,
-                densityHeatmapDelta,
-                kernelSize
-            );
-            ParticleSystem particleSystem = GetComponent<ParticleSystem>();
-            Visualization.SetupParticleSystem(particleSystem, particlePositions, outColors, particleSize);
-        }
-
-        if (showTrajectory)
-        {
-            int trajectoryIndex = 0;
-            foreach (KeyValuePair<string, Trajectory> entry in trajectories)
-            {
-                List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
-                List<float> currTimes = entry.Value.Select(x => x.TimeStamp).ToList();
-                lineRendererParent = new GameObject {hideFlags = HideFlags.HideInHierarchy};
-                lineRenderer.Add(entry.Key, lineRendererParent.AddComponent<LineRenderer>());
-                Visualization.RenderTrajectory(
-                    lineRenderer: lineRenderer[entry.Key],
-                    positions: currPositions.ToList(),
-                    timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
-                    currentTimeStep: 1.0f,
-                    gradient: singleColorPerTrajectory ? null : trajectoryGradient,
-                    color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
-                    trajectoryWidth: pathWidth,
-                    normalizeTime: true,
-                    normalizePosition: false
-                );
-                trajectoryIndex++;
-                if (visualizeShortestPath)
-                {
-                    Vector3 startPos = inferStartLocation ? currPositions.First() : startLocation.position;
-                    Vector3 endPos = inferEndLocation ? currPositions.Last() : endLocation.position;
-
-                    // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
-                    NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
-                    startPos = startHit.position;
-                    NavMesh.SamplePosition(endPos, out NavMeshHit endHit, 100.0f, NavMesh.AllAreas);
-                    endPos = endHit.position;
-
-                    // Creating linerenderer for shortest path.
-                    shortestPathLinerendererParent = new GameObject {hideFlags = HideFlags.HideInHierarchy};
-                    shortestPathLinerenderer = shortestPathLinerendererParent.AddComponent<LineRenderer>();
-
-                    // Create shortest path.
-                    NavMeshPath navMeshPath = new NavMeshPath();
-                    bool foundPath = NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
-                    if (!foundPath)
-                    {
-                        Debug.LogError("Shortest path could not be calculated. Have you baked the NavMesh?");
-                    }
-                    else
-                    {
-                        Visualization.RenderTrajectory(
-                            lineRenderer: shortestPathLinerenderer,
-                            positions: navMeshPath.corners.ToList(),
-                            timesteps: Enumerable.Range(0, navMeshPath.corners.Length).Select(i => (float)i).ToList(),
-                            currentTimeStep: 1.0f,
-                            gradient: shortestPathGradient,
-                            trajectoryWidth: pathWidth,
-                            normalizeTime: true
-                        );
-                    }
-                }
-            }
-        }
-
-        if (generateSummarizedDataFile)
+        if (isDataSummaryEnabled)
         {
             WriteSummarizedDataFile();
         }
@@ -248,7 +131,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
     void Update()
     {
-        if (!showTrajectory || !showTrajectoryProgressively)
+        if (!isTrajectoryVisEnabled || !showTrajectoryProgressively)
         {
             return;
         }
@@ -291,9 +174,9 @@ public class ProcessWalkthrough : MonoBehaviour
             }
             filterDict.Add(filter.List[0], filter.List.Skip(1).ToList());
         }
-        
+
         // Check that only one of showVisualAttention and showPositionHeatmap is set to true.
-        if (showVisualAttention && showDensityHeatmap)
+        if (isVisualAttentionEnabled && isDensityHeatmapEnabled)
         {
             Debug.LogError("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
         }
@@ -320,7 +203,139 @@ public class ProcessWalkthrough : MonoBehaviour
         outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
         outerConeRadiusVertical = Mathf.Tan(verticalViewAngle / 2.0f * Mathf.Deg2Rad);
     }
-    
+
+    void ReadData()
+    {
+        // Create a list of filenames for the raw data files to be read. If `useAllFilesInDirectory` is false, then this
+        // list will consist of only one file. Otherwise all files in that directory will be added.
+        rawDataFileNames = new List<string>();
+        if (useAllFilesInDirectory)
+        {
+            // Read in all files in the directory.
+            rawDataFileNames = new List<string>(Directory.GetFiles(rawDataDirectory, "*.csv"));
+        }
+        else
+        {
+            // Only get single file.
+            rawDataFileNames.Add(rawDataFileName);
+        }
+
+        // Parse each file and populate the positions and direction arrays.
+        foreach (string fileName in rawDataFileNames)
+        {
+            (List<string> columnNames, List<List<string>> data) = IO.ReadCSV(fileName, separator: csvDelimiter);
+
+            // Filter data.
+            data = FilterData(columnNames, data, filters.Select(x => (x.List.First(), x.List.Skip(1).ToList())).ToList());
+
+            // Check that all required columns are present.
+            CheckColumns(columnNames);
+
+            // Parse the data and populate the positions and direction arrays.
+            foreach (List<string> row in data)
+            {
+                // Create the key.
+                string key = multipleTrialsInOneFile ? CreateSuperKey(keyColumns.List, columnNames, row) : Path.GetFileName(fileName);
+                ParseRow(row, key, ref trajectories, columnNames);
+            }
+        }
+    }
+
+    void VisualizeAttention()
+    {
+        if (reuseHeatmap)
+        {
+            LoadHeatMap();
+        }
+        else
+        {
+            (particlePositions, kdeValues, hitsPerLayer) = VisualAttention.CreateHeatMap(
+                trajectories,
+                maxNumRays,
+                outerConeRadiusVertical,
+                outerConeRadiusHorizontal,
+                numRaysPerRayCast,
+                layerMask,
+                kernelSize
+            );
+            WriteProcessedDataFile();
+        }
+        ParticleSystem particleSystem = GetComponent<ParticleSystem>();
+        Visualization.SetupParticleSystem(particleSystem, particlePositions, kdeValues, heatmapGradient, particleSize);
+    }
+
+    void VisualizeDensityHeatmap()
+    {
+        List<Color> outColors;
+        (particlePositions, outColors) = DensityHeatmap.GenerateDensityHeatmap(
+            trajectories,
+            densityHeatmapColors.List,
+            densityHeatmapDelta,
+            kernelSize
+        );
+        ParticleSystem particleSystem = GetComponent<ParticleSystem>();
+        Visualization.SetupParticleSystem(particleSystem, particlePositions, outColors, particleSize);
+    }
+
+    void VisualizeTrajectory()
+    {
+        int trajectoryIndex = 0;
+        foreach (KeyValuePair<string, Trajectory> entry in trajectories)
+        {
+            List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
+            List<float> currTimes = entry.Value.Select(x => x.TimeStamp).ToList();
+            lineRendererParent = new GameObject { hideFlags = HideFlags.HideInHierarchy };
+            lineRenderer.Add(entry.Key, lineRendererParent.AddComponent<LineRenderer>());
+            Visualization.RenderTrajectory(
+                lineRenderer: lineRenderer[entry.Key],
+                positions: currPositions.ToList(),
+                timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
+                currentTimeStep: 1.0f,
+                gradient: singleColorPerTrajectory ? null : trajectoryGradient,
+                color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
+                trajectoryWidth: pathWidth,
+                normalizeTime: true,
+                normalizePosition: false
+            );
+            trajectoryIndex++;
+            if (isShortestPathVisEnabled)
+            {
+                Vector3 startPos = inferStartLocation ? currPositions.First() : startLocation.position;
+                Vector3 endPos = inferEndLocation ? currPositions.Last() : endLocation.position;
+
+                // startPos and endPos do not necessarily lie on the NavMesh. Finding path between them might fail.
+                NavMesh.SamplePosition(startPos, out NavMeshHit startHit, 100.0f, NavMesh.AllAreas);  // Hardcoded to 100 units of maximal distance.
+                startPos = startHit.position;
+                NavMesh.SamplePosition(endPos, out NavMeshHit endHit, 100.0f, NavMesh.AllAreas);
+                endPos = endHit.position;
+
+                // Creating linerenderer for shortest path.
+                shortestPathLinerendererParent = new GameObject { hideFlags = HideFlags.HideInHierarchy };
+                shortestPathLinerenderer = shortestPathLinerendererParent.AddComponent<LineRenderer>();
+
+                // Create shortest path.
+                NavMeshPath navMeshPath = new NavMeshPath();
+                bool foundPath = NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
+                if (!foundPath)
+                {
+                    Debug.LogError("Shortest path could not be calculated. Have you baked the NavMesh?");
+                }
+                else
+                {
+                    Visualization.RenderTrajectory(
+                        lineRenderer: shortestPathLinerenderer,
+                        positions: navMeshPath.corners.ToList(),
+                        timesteps: Enumerable.Range(0, navMeshPath.corners.Length).Select(i => (float)i).ToList(),
+                        currentTimeStep: 1.0f,
+                        gradient: shortestPathGradient,
+                        trajectoryWidth: pathWidth,
+                        normalizeTime: true
+                    );
+                }
+            }
+        }
+    }
+
     // This function is probably defunct.
     private void LoadHeatMap()
     {
@@ -414,7 +429,7 @@ public class ProcessWalkthrough : MonoBehaviour
         List<string> columnNames = new();
         if (multipleTrialsInOneFile)
         {
-           columnNames.AddRange(keyColumns.List); 
+            columnNames.AddRange(keyColumns.List);
         }
         else
         {
@@ -440,7 +455,7 @@ public class ProcessWalkthrough : MonoBehaviour
         Dictionary<string, int> totalHitsPerLayer = new();
         foreach (KeyValuePair<string, int[]> entry in hitsPerLayer)
         {
-            totalHitsPerLayer[entry.Key] = showVisualAttention ? entry.Value.Sum() : -1;
+            totalHitsPerLayer[entry.Key] = isVisualAttentionEnabled ? entry.Value.Sum() : -1;
         }
         foreach (KeyValuePair<string, float> entry in durations)
         {
@@ -465,11 +480,11 @@ public class ProcessWalkthrough : MonoBehaviour
 
             for (int j = 0; j < 32; j++)
             {
-                if (showVisualAttention)
+                if (isVisualAttentionEnabled)
                 {
                     int numHits = hitsPerLayer[entry.Key][j];
                     int numTotalHits = totalHitsPerLayer[entry.Key];
-                    row.Add(((float) numHits / numTotalHits).ToString(outputNumberFormat, CultureInfo.InvariantCulture));
+                    row.Add(((float)numHits / numTotalHits).ToString(outputNumberFormat, CultureInfo.InvariantCulture));
                 }
                 else
                 {
