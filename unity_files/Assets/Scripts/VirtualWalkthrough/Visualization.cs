@@ -13,7 +13,7 @@ namespace EBD
             LineRenderer lineRenderer,
             List<Vector3> positions,
             List<float> timesteps,
-            float progress,
+            float currentTimeStep,
             float trajectoryWidth,
             Gradient gradient = null,
             Color color = default,
@@ -59,7 +59,7 @@ namespace EBD
             int numPoints = 0;
             for (int i = 0; i < timesteps.Count; i++)
             {
-                if (timesteps[i] <= progress)
+                if (timesteps[i] <= currentTimeStep)
                 {
                     numPoints++;
                 }

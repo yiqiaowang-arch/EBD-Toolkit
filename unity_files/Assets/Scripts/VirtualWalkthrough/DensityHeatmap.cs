@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Trajectory = System.Collections.Generic.List<EBD.TrajectoryEntry>;
-
 
 namespace EBD
 {
@@ -53,6 +54,30 @@ namespace EBD
             return queryPoints;
         }
 
+        private static List<Vector3> FilterQueryPointsByDistance(List<Vector3> queryPoints, List<Vector3> data, float bandwidth)
+        {
+            ConcurrentBag<Vector3> filteredQueryPoints = new ConcurrentBag<Vector3>();
+
+            Parallel.ForEach(queryPoints, queryPoint =>
+            {
+                float minDistance = float.MaxValue;
+                foreach (Vector3 dataPoint in data)
+                {
+                    float distance = Vector3.Distance(queryPoint, dataPoint);
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                    }
+                }
+                if (minDistance < bandwidth)
+                {
+                    filteredQueryPoints.Add(queryPoint);
+                }
+            });
+
+            return filteredQueryPoints.ToList();
+        }
+
         private static Gradient GradientPerTrajectory(Color color)
         {
             // Should be transparent at the beginning and opaque, with color
@@ -81,27 +106,31 @@ namespace EBD
         {
             (Vector3 minPoint, Vector3 maxPoint) = GetBounds(trajectories);
             List<Vector3> queryPoints = GenerateQueryPoints(minPoint, maxPoint, spatialDelta);
+            Debug.Log($"Number of query points before filtering: {queryPoints.Count}");
+            List<Vector3> allPositions = trajectories.SelectMany(entry => entry.Value.Select(e => e.Position)).ToList();
+            List<Vector3> filteredQueryPoints = FilterQueryPointsByDistance(queryPoints, allPositions, bandwidth);
+            Debug.Log($"Number of query points after filtering: {filteredQueryPoints.Count}");
             List<Vector3> particlePoints = new();
             List<Color> colors = new();
             int trajectoryIndex = 0;
             foreach (KeyValuePair<string, Trajectory> entry in trajectories)
             {
                 List<Vector3> data = entry.Value.Select(e => e.Position).ToList();
-                List<float> densities = KernelDensityEstimate.Evaluate(data, queryPoints, bandwidth);
-                
+                List<float> densities = KernelDensityEstimate.Evaluate(data, filteredQueryPoints, bandwidth);
+
                 // Remove points with density below threshold.
-                List<Vector3> filteredQueryPoints = new();
+                List<Vector3> highDensityQueryPoints = new();
                 List<float> filteredDensities = new();
                 for (int i = 0; i < densities.Count; i++)
                 {
                     if (densities[i] > densityThreshold)
                     {
-                        filteredQueryPoints.Add(queryPoints[i]);
+                        highDensityQueryPoints.Add(filteredQueryPoints[i]);
                         filteredDensities.Add(densities[i]);
                     }
                 }
 
-                particlePoints.AddRange(filteredQueryPoints);
+                particlePoints.AddRange(highDensityQueryPoints);
 
                 // Create color per sample
                 Gradient gradient = GradientPerTrajectory(trajectoryColors[trajectoryIndex % trajectoryColors.Count]);

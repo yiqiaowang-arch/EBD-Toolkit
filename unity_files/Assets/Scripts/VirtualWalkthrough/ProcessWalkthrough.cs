@@ -108,49 +108,8 @@ public class ProcessWalkthrough : MonoBehaviour
 
     void Start()
     {
-        if (useAllFilesInDirectory && multipleTrialsInOneFile)
-        {
-            throw new Exception("Using multiple files and multiple trials in one file is not supported.");
-        }
-        // The total number of rays cannot be smaller than the number of rays per raycast.
-        if (numRaysPerRayCast > maxNumRays)
-        {
-            throw new Exception("numRaysPerRayCast must be smaller than maxNumRays.");
-        }
-
-        foreach (SerializableStringList filter in filters)
-        {
-            if (filter.List.Count < 2)
-            {
-                Debug.LogError("Each filter must have at least two elements. First element is the column name, the rest are the values to be filtered.");
-            }
-            filterDict.Add(filter.List[0], filter.List.Skip(1).ToList());
-        }
-
-        numRayCast = Mathf.CeilToInt((float)maxNumRays / numRaysPerRayCast);
-
-        if (lineRendererMaterial == null)
-        {
-            lineRendererMaterial = new Material(Shader.Find("Sprites/Default"));  // Default material for linerenderer.
-        }
-        if (heatmapMaterial == null)
-        {
-            heatmapMaterial = new Material(Shader.Find("Particles/Priority Additive (Soft)")); // Default material for heatmap.
-        }
-        
-        // Check that only one of showVisualAttention and showPositionHeatmap is set to true.
-        if (showVisualAttention && showDensityHeatmap)
-        {
-            Debug.LogError("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
-            throw new Exception("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
-        }
-        // Initialize hitsPerLayer.
-        hitsPerLayer = new();
-
-        // Set material of particle system.
-        gameObject.GetComponent<ParticleSystemRenderer>().material = heatmapMaterial;
-        outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
-        outerConeRadiusVertical = Mathf.Tan(verticalViewAngle / 2.0f * Mathf.Deg2Rad);
+        ValidateInputs();
+        Initialize();
 
         // Create a list of filenames for the raw data files to be read. If <useAllFilesInDirectory> is false, then this
         // list will consist of only one file. Otherwise all files in that directory will be added.
@@ -218,10 +177,10 @@ public class ProcessWalkthrough : MonoBehaviour
                 densityHeatmapDelta,
                 kernelSize
             );
-            Debug.Log($"Number of particles: {particlePositions.Count}.");
             ParticleSystem particleSystem = GetComponent<ParticleSystem>();
             Visualization.SetupParticleSystem(particleSystem, particlePositions, outColors, particleSize);
         }
+
         if (showTrajectory)
         {
             int trajectoryIndex = 0;
@@ -229,16 +188,13 @@ public class ProcessWalkthrough : MonoBehaviour
             {
                 List<Vector3> currPositions = entry.Value.Select(x => x.Position).ToList();
                 List<float> currTimes = entry.Value.Select(x => x.TimeStamp).ToList();
-                lineRendererParent = new GameObject
-                {
-                    hideFlags = HideFlags.HideInHierarchy
-                };
+                lineRendererParent = new GameObject {hideFlags = HideFlags.HideInHierarchy};
                 lineRenderer.Add(entry.Key, lineRendererParent.AddComponent<LineRenderer>());
                 Visualization.RenderTrajectory(
                     lineRenderer: lineRenderer[entry.Key],
                     positions: currPositions.ToList(),
                     timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
-                    progress: 1.0f,
+                    currentTimeStep: 1.0f,
                     gradient: singleColorPerTrajectory ? null : trajectoryGradient,
                     color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
                     trajectoryWidth: pathWidth,
@@ -258,24 +214,28 @@ public class ProcessWalkthrough : MonoBehaviour
                     endPos = endHit.position;
 
                     // Creating linerenderer for shortest path.
-                    shortestPathLinerendererParent = new GameObject
-                    {
-                        hideFlags = HideFlags.HideInHierarchy
-                    };
+                    shortestPathLinerendererParent = new GameObject {hideFlags = HideFlags.HideInHierarchy};
                     shortestPathLinerenderer = shortestPathLinerendererParent.AddComponent<LineRenderer>();
 
                     // Create shortest path.
                     NavMeshPath navMeshPath = new NavMeshPath();
-                    NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
-                    Visualization.RenderTrajectory(
-                        lineRenderer: shortestPathLinerenderer,
-                        positions: navMeshPath.corners.ToList(),
-                        timesteps: Enumerable.Range(0, navMeshPath.corners.Length).Select(i => (float)i).ToList(),
-                        progress: 1.0f,
-                        gradient: shortestPathGradient,
-                        trajectoryWidth: pathWidth,
-                        normalizeTime: true
-                    );
+                    bool foundPath = NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, navMeshPath);
+                    if (!foundPath)
+                    {
+                        Debug.LogError("Shortest path could not be calculated. Have you baked the NavMesh?");
+                    }
+                    else
+                    {
+                        Visualization.RenderTrajectory(
+                            lineRenderer: shortestPathLinerenderer,
+                            positions: navMeshPath.corners.ToList(),
+                            timesteps: Enumerable.Range(0, navMeshPath.corners.Length).Select(i => (float)i).ToList(),
+                            currentTimeStep: 1.0f,
+                            gradient: shortestPathGradient,
+                            trajectoryWidth: pathWidth,
+                            normalizeTime: true
+                        );
+                    }
                 }
             }
         }
@@ -301,7 +261,7 @@ public class ProcessWalkthrough : MonoBehaviour
                 lineRenderer: lineRenderer[entry.Key],
                 positions: currPositions.ToList(),
                 timesteps: Enumerable.Range(0, currPositions.Count()).Select(i => (float)i).ToList(),
-                progress: Time.realtimeSinceStartup % replayDuration / replayDuration,
+                currentTimeStep: Time.realtimeSinceStartup % replayDuration / replayDuration,
                 gradient: singleColorPerTrajectory ? null : trajectoryGradient,
                 color: singleColorPerTrajectory ? trajectoryColors.List[trajectoryIndex % trajectoryColors.List.Count] : default,
                 trajectoryWidth: pathWidth,
@@ -309,6 +269,56 @@ public class ProcessWalkthrough : MonoBehaviour
             );
             trajectoryIndex++;
         }
+    }
+
+    void ValidateInputs()
+    {
+        if (useAllFilesInDirectory && multipleTrialsInOneFile)
+        {
+            throw new Exception("Using multiple files and multiple trials in one file is not supported.");
+        }
+        // The total number of rays cannot be smaller than the number of rays per raycast.
+        if (numRaysPerRayCast > maxNumRays)
+        {
+            throw new Exception("numRaysPerRayCast must be smaller than maxNumRays.");
+        }
+
+        foreach (SerializableStringList filter in filters)
+        {
+            if (filter.List.Count < 2)
+            {
+                Debug.LogError("Each filter must have at least two elements. First element is the column name, the rest are the values to be filtered.");
+            }
+            filterDict.Add(filter.List[0], filter.List.Skip(1).ToList());
+        }
+        
+        // Check that only one of showVisualAttention and showPositionHeatmap is set to true.
+        if (showVisualAttention && showDensityHeatmap)
+        {
+            Debug.LogError("Only one of showVisualAttention and showPositionHeatmap can be set to true.");
+        }
+    }
+
+    void Initialize()
+    {
+        numRayCast = Mathf.CeilToInt((float)maxNumRays / numRaysPerRayCast);
+
+        if (lineRendererMaterial == null)
+        {
+            lineRendererMaterial = new Material(Shader.Find("Sprites/Default"));  // Default material for linerenderer.
+        }
+        if (heatmapMaterial == null)
+        {
+            heatmapMaterial = new Material(Shader.Find("Particles/Priority Additive (Soft)")); // Default material for heatmap.
+        }
+
+        // Initialize hitsPerLayer.
+        hitsPerLayer = new();
+
+        // Set material of particle system.
+        gameObject.GetComponent<ParticleSystemRenderer>().material = heatmapMaterial;
+        outerConeRadiusHorizontal = Mathf.Tan(horizontalViewAngle / 2.0f * Mathf.Deg2Rad);
+        outerConeRadiusVertical = Mathf.Tan(verticalViewAngle / 2.0f * Mathf.Deg2Rad);
     }
     
     // This function is probably defunct.
@@ -348,7 +358,6 @@ public class ProcessWalkthrough : MonoBehaviour
         Dictionary<string, float> surplusShortestPaths = new();
         Dictionary<string, float> ratioShortestPaths = new();
         Dictionary<string, int> successfuls = new();
-        Dictionary<string, List<float>> viewPercentages = new();
 
         foreach (KeyValuePair<string, Trajectory> entry in trajectories)
         {
