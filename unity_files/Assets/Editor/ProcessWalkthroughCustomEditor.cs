@@ -4,18 +4,11 @@ using System.IO;
 using UnityEditorInternal;
 using System.Linq;
 using System;
+using EBD;
 
 [CustomEditor(typeof(ProcessWalkthrough))]
 public class ProcessWalkthroughCustomEditor : Editor
 {
-    // This directory contains trajectory data (e.g., created by CaptureWalkthough.cs)
-    string defaultRawDataPath = Path.Combine("Data", "VirtualWalkthrough", "Raw");
-
-    // This directory contains processed data (e.g, the value of point-clouds)
-    string defaultProcessedDataPath = Path.Combine("Data", "VirtualWalkthrough", "Processed");
-
-    // This directory contains statistics about the trajectory.
-    string defaultFinalDataPath = Path.Combine("Data", "VirtualWalkthrough", "Final");
     UnityEditor.AnimatedValues.AnimBool showTrajectoryAnimBool;
     UnityEditor.AnimatedValues.AnimBool showVisualAttentionAnimBool;
     UnityEditor.AnimatedValues.AnimBool showShortestPathBool;
@@ -72,7 +65,7 @@ public class ProcessWalkthroughCustomEditor : Editor
         // If a new directory is chosen, we need to force the user to choose a new file name as well.
         if (GUILayout.Button("Choose raw data directory", GUILayout.Width(buttonWidth)))
         {
-            string newRawDirectoryName = EditorUtility.OpenFolderPanel("Choose directory containing raw data", "", defaultRawDataPath);
+            string newRawDirectoryName = EditorUtility.OpenFolderPanel("Choose directory containing raw data", "", DefaultPaths.RawDataPath);
 
             // Only apply changes if the user has actually chosen a new directory (the returned name is not the empty
             // string) and if the new directory is not the same as the old one.
@@ -132,7 +125,7 @@ public class ProcessWalkthroughCustomEditor : Editor
 
         if (GUILayout.Button("Delete file", GUILayout.Width(buttonWidth)))
         {
-            string fileNameToDelete = EditorUtility.OpenFilePanel("Delete file", defaultRawDataPath, "csv");
+            string fileNameToDelete = EditorUtility.OpenFilePanel("Delete file", DefaultPaths.RawDataPath, "csv");
 
             if (fileNameToDelete != "")
             {
@@ -405,10 +398,10 @@ public class ProcessWalkthroughCustomEditor : Editor
 
     void SetDerivedDirNames()
     {
-        Directory.CreateDirectory(defaultProcessedDataPath);
-        Directory.CreateDirectory(defaultFinalDataPath);
+        Directory.CreateDirectory(DefaultPaths.ProcessedDataPath);
+        Directory.CreateDirectory(DefaultPaths.FinalDataPath);
         processor.outProcessedDataFileName = Path.Combine(
-            defaultProcessedDataPath,
+            DefaultPaths.ProcessedDataPath,
             CreateDerivedFileName(
                 processor.rawDataFileName,
                 "processed",
@@ -416,7 +409,7 @@ public class ProcessWalkthroughCustomEditor : Editor
             )
         );
         processor.outSummarizedDataFileName = Path.Combine(
-            defaultFinalDataPath,
+            DefaultPaths.FinalDataPath,
             CreateDerivedFileName(
                 processor.rawDataFileName,
                 "final",
