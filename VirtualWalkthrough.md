@@ -136,7 +136,7 @@ Similarly to the above, you can also visualize the visual attention patterns d
 ## 3.3 Analysis Output
 If `Visual Attention Heatmap` is enabled, a summary file including a variety of measures about the trajectories will be generated. The location of said file is indicated on the `ProcessWalkthrough` script.
 ![Figure 17](/figures/vr_summary_file_save_location.jpg)
-***Figure 12**: Location of the summary file*
+***Figure 17**: Location of the summary file*
 
 The file contains a table, where each row corresponds to a trajectory, and each column to a metric. The contents of this file can be read using any text editor, but it is probably more convenient to use a tool like Excel. Here is a description of the columns:
 - **TrialID**: This corresponds to the file name that contained the raw trajectory data
