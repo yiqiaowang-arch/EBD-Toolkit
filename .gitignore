@@ -3,3 +3,6 @@ Temp
 .vscode
 
 *.mp4
+
+# Test scene
+unity_files/Assets/Scenes/DoNotGetLost.unity
