@@ -21,20 +21,9 @@ After logging in, we first need a version of the Unity Engine. Go to _Installs >
 >Generally, it should be possible you use a newer or older version of Unity of the same major version (everything that starts with 2022.x.xxxx), or even older or newer versions. However, at the time of writing this tutorial, only the version indicated above has been tested.
 
 ### 3.2 Opening the Unity Project
-After the installation has finished, we are ready to add EBD-Toolkit project to the project list. Go to _Projects > Add_, and then choose the location of the project folder you have cloned in 2. In the newly added project, add the Unity version you have just installed, and click on the project to open it.
+After the installation has finished, we are ready to add EBD-Toolkit project to the project list. Go to _Projects > Add_, and then choose the location of the project folder called __unity_files_ within the EBD-Toolkit folder you have cloned in previously. In the newly added project, add the Unity version you have just installed, and click on the project to open it.
+
 >[!NOTE]
 >Depending on your exact version of Unity, you will see a prompt asking you if you want to upgrade the project to a newer version of Unity. Choose _Confirm_
 
 The first time you open the project, the start-up might take a few minutes.
-
-
-# Cognitive Walkthroughs in Virtual Reality
-The EBD-Toolkit provides a set of scripts to perform virtual walkthroughs in scenes where you visualize your design.
->[!TIP]
->In Unity Engine, _objects_ are the elements like characters or props, _scenes_ are the virtual environments where they exist, and _scripts_, written in programming languages like C#, define their behavior. Objects are placed in scenes, and scripts control their interactions, movements, and responses.
-
-This tutorial will show you how to set up a virtual walkthrough experiment using a scene template that you can easily modify and extend.
-
-# Agent-Based Modeling to Simulate Occupants' Behavior
-
-# I have a question, found a bug or have a suggestion regarding the toolkit
