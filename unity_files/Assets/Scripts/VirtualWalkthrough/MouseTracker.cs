@@ -7,10 +7,13 @@ using UnityEngine;
  */
 public class MouseTracker : MonoBehaviour
 {
-    
+    [Tooltip("How fast is your player reacting to mouse-movement.")]
     public float mouseSensitivity = 100.0f;        // How fast is your player reacting to mouse-movement.
+    [Tooltip("The body of the character.")]
     public Transform playerBody;                    // The body of the character.
+    [Tooltip("How far back can the character tilt its head back (degrees).")]
     public float maxDorsal = 60.0f;                 // How far back can the character tilt its head back.
+    [Tooltip("How far forward can the character tilt its head forward (degrees).")]
     public float maxVentral = 60.0f;                // How far forward can the character tilt its head forward.
     
     private float xRotation = 0.0f;                 // The current tilt of the head.

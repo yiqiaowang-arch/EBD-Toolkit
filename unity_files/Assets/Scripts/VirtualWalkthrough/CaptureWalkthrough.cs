@@ -11,7 +11,7 @@ public class CaptureWalkthrough : MonoBehaviour
     public float sampleInterval = 0.1f;             // How many seconds have to pass until new sample is taken.
     public string fileName;                         // Name of file the samples get written to.
     public bool useCustomSubDirectory = false;
-    public string directory = "RawData/Default";
+    public string dataDirectory;
     public float targetProximity = 1.0f;
     public Transform target;                        // The target to be found.
     public GameObject view;                         // The actual view.
@@ -58,7 +58,7 @@ public class CaptureWalkthrough : MonoBehaviour
         xAngle = new List<float>();
         time = new List<float>();
 
-        fileName = IO.GenerateUniqueFilename(directory, fileName);
+        fileName = IO.GenerateUniqueFilename(dataDirectory, fileName);
 
         Debug.Log("Writing raw data to " + fileName);
 
