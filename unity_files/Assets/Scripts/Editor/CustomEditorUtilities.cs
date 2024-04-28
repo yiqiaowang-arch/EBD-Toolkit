@@ -1,24 +1,29 @@
-using UnityEngine;
 using UnityEditor;
 using System.IO;
-using UnityEditorInternal;
 using System.Linq;
 using System;
-using EBD;
 
 namespace EBD
 {
     public static class CustomEditorUtils
     {
-        public static void ChooseRawDataFile(ref string directory, string defaultFileName)
+        public static void ChooseRawDataFile(ref string targetFileName, string directory, string defaultFileName, bool isSave = false)
         {
-            string newRawDataFileName = EditorUtility.OpenFilePanel("Choose raw data file", directory, "csv");
+            string newRawDataFileName;
+            if (isSave)
+            {
+                newRawDataFileName = EditorUtility.SaveFilePanel("Choose raw data file", directory, defaultFileName, "csv");
+            }
+            else
+            {
+                newRawDataFileName = EditorUtility.OpenFilePanel("Choose raw data file", directory, "csv");
+            }
             if (newRawDataFileName == "")
             {
                 // The user has aborted the file-selection process. Revert to old file name.
                 newRawDataFileName = defaultFileName;
             }
-            directory = newRawDataFileName;
+            targetFileName = newRawDataFileName;
         }
 
         // This assumes that the Unity project is called `unity_files`

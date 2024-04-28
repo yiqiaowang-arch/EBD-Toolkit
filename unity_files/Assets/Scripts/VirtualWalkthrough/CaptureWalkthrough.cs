@@ -9,9 +9,8 @@ using EBD;
 public class CaptureWalkthrough : MonoBehaviour
 {
     public float sampleInterval = 0.1f;             // How many seconds have to pass until new sample is taken.
-    public string fileName;                         // Name of file the samples get written to.
-    public bool useCustomSubDirectory = false;
-    public string dataDirectory;
+    public string fileName = "virtual_walkthrough.csv"; // Name of file the samples get written to.
+    public string dataDirectory = DefaultPaths.RawDataPath;
     public float targetProximity = 1.0f;
     public Transform target;                        // The target to be found.
     public GameObject view;                         // The actual view.
@@ -25,14 +24,11 @@ public class CaptureWalkthrough : MonoBehaviour
     private List<float> time;                       // Time.
     private float lastSample;                       // The time the last sample was taken.  
     private const string csvSep = ";";
+    private string path;
 
     // Start is called before the first frame update
     void Start()
     {
-        if (!Directory.Exists("RawData/Default"))
-        {
-            Directory.CreateDirectory("RawData/Default");
-        }
         // Checking that camera is present.
         bool hasCamera = false;
         for (int i = 0; i < gameObject.transform.childCount; i++)
@@ -45,7 +41,7 @@ public class CaptureWalkthrough : MonoBehaviour
         }
         if (!hasCamera)
         {
-            throw new System.Exception("The Player Object this component is attached to has no Camera object child. Please use a valid Player.");
+            Debug.LogError("The Player Object this component is attached to has no Camera object child. Please use a valid Player.");
         }
 
         // Initialize the containers of our data.
@@ -58,9 +54,12 @@ public class CaptureWalkthrough : MonoBehaviour
         xAngle = new List<float>();
         time = new List<float>();
 
-        fileName = IO.GenerateUniqueFilename(dataDirectory, fileName);
+        Debug.Log($"fileName: {fileName}");
 
-        Debug.Log("Writing raw data to " + fileName);
+
+        path = IO.GenerateUniqueFilename(dataDirectory, fileName);
+
+        Debug.Log($"Writing raw data to: {path}");
 
         // Set the time of the last sample to the moment the game starts.
         lastSample = Time.realtimeSinceStartup;
@@ -151,7 +150,7 @@ public class CaptureWalkthrough : MonoBehaviour
             (List<string> columnNames, List<List<string>> data) = PrepareDataForCSV();
 
             // Write data.
-            IO.WriteCSV(fileName, columnNames, data, csvSep);
+            IO.WriteCSV(path, columnNames, data, csvSep);
         }
     }
 }

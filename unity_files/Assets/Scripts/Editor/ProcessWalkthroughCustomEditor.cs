@@ -77,7 +77,8 @@ public class ProcessWalkthroughCustomEditor : Editor
                 if (!processor.useAllFilesInDirectory)
                 {
                     CustomEditorUtils.ChooseRawDataFile(
-                        ref processor.rawDataDirectory,
+                        ref processor.rawDataFileName,
+                        processor.rawDataDirectory,
                         Directory.GetFiles(processor.rawDataDirectory)[0]
                     );
                 }
@@ -98,7 +99,8 @@ public class ProcessWalkthroughCustomEditor : Editor
             {
                 // The toggle was previously on, but is now switched off. In this case we need to choose a specific file.
                 CustomEditorUtils.ChooseRawDataFile(
-                    ref processor.rawDataDirectory,
+                    ref processor.rawDataFileName,
+                    processor.rawDataDirectory,
                     Directory.GetFiles(processor.rawDataDirectory)[0]
                 );
             }
@@ -111,7 +113,8 @@ public class ProcessWalkthroughCustomEditor : Editor
         if (GUILayout.Button("Choose raw data file", GUILayout.Width(buttonWidth)))
         {
             CustomEditorUtils.ChooseRawDataFile(
-                ref processor.rawDataDirectory,
+                ref processor.rawDataFileName,
+                processor.rawDataDirectory,
                 processor.rawDataFileName
             );
         }

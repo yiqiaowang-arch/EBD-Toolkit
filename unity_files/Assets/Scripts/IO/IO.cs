@@ -93,13 +93,13 @@ namespace EBD
 
                 // Check if there was a previous overwrite and get highest identifier.
                 int id = 0;
-                while (File.Exists(Path.Combine(dirName, fileNameWithoutExtension + "_" + id.ToString() + extension)))
+                while (File.Exists(Path.Combine(dirName, $"{fileNameWithoutExtension}_{id}{extension}")))
                 {
                     id++;
                 }
 
                 // Now we have found a unique identifier and create the new name.
-                path = Path.Combine(dirName, fileNameWithoutExtension + "_" + id.ToString() + extension);
+                path = Path.Combine(dirName, $"{fileNameWithoutExtension}_{id}{extension}");
             }
             return path;
         }

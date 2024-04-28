@@ -7,13 +7,15 @@ using EBD;
 public class CaptureWalkthroughCustomEditor : Editor
 {
     CaptureWalkthrough capture;
+
+    public void OnEnable()
+    {
+        capture = (CaptureWalkthrough) target;
+    }
+    
     public override void OnInspectorGUI()
     {
-        CaptureWalkthrough capture = (CaptureWalkthrough) target;
-
         EditorGUILayout.Space();
-
-        EditorGUI.BeginChangeCheck();
 
         EditorGUILayout.BeginHorizontal();
 
@@ -26,6 +28,14 @@ public class CaptureWalkthroughCustomEditor : Editor
             if (newRawDirectoryName != "" && newRawDirectoryName != capture.dataDirectory)
             {
                 capture.dataDirectory = newRawDirectoryName;
+
+                // Choose a new file name based on the new directory.
+                CustomEditorUtils.ChooseRawDataFile(
+                    ref capture.fileName,
+                    capture.dataDirectory,
+                    Path.GetFileName(capture.fileName),
+                    true
+                );
             }
         }
 
@@ -33,33 +43,18 @@ public class CaptureWalkthroughCustomEditor : Editor
 
         EditorGUILayout.EndHorizontal();
 
-        if (EditorGUI.EndChangeCheck())
-        {
-            // Retrigger file name choice if directory was changed.
-            string fileName = capture.dataDirectory + "/" + Path.GetFileName(capture.fileName);
-            
-            // If the user cancels the action, an empty string will be returned. In that case we do not want to make 
-            // any modifications.
-            if (fileName != "")
-            {
-                capture.fileName = fileName;
-            }
-        }
-
         EditorGUILayout.Space();
 
         GUILayout.BeginHorizontal();
 
-        if (GUILayout.Button("Choose (base) file name")) 
+        if (GUILayout.Button("Choose file name")) 
         {
-            string fileName = EditorUtility.SaveFilePanel("Select file name", capture.dataDirectory, "capture", "csv");
-            
-            // If the user cancels the action, an empty string will be returned. In that case we do not want to make 
-            // any modifications.
-            if (fileName != "")
-            {
-                capture.fileName = fileName;
-            }
+            CustomEditorUtils.ChooseRawDataFile(
+                ref capture.fileName,
+                capture.dataDirectory,
+                Path.GetFileName(capture.fileName),
+                true
+            );
         }
         GUILayout.Label(Path.GetFileName(capture.fileName));
 

@@ -30,7 +30,7 @@ public class ProcessWalkthrough : MonoBehaviour
     public float kernelSize = 1.0f;
 
     public bool useAllFilesInDirectory = false;
-    public string rawDataDirectory = Path.Combine("Data", "VirtualWalkthrough", "Raw");
+    public string rawDataDirectory = DefaultPaths.RawDataPath;
     public string rawDataFileName = Path.Combine("Data", "VirtualWalkthrough", "Raw", "Walkthrough.csv");
     public string outProcessedDataFileName;
     public string outSummarizedDataFileName;
@@ -364,7 +364,7 @@ public class ProcessWalkthrough : MonoBehaviour
 
     private void WriteSummarizedDataFile()
     {
-
+        Debug.Log("Writing summarized data file.");
         // Variables to be written out. One entry per trial id (or file name).
         Dictionary<string, float> durations = new();
         Dictionary<string, float> distances = new();
