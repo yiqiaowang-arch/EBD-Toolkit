@@ -27,3 +27,9 @@ After the installation has finished, we are ready to add EBD-Toolkit project to 
 >Depending on your exact version of Unity, you will see a prompt asking you if you want to upgrade the project to a newer version of Unity. Choose _Confirm_
 
 The first time you open the project, the start-up might take a few minutes.
+
+# Using the Toolkit
+Find the tutorials to the toolkit's three main features here:
+- [Virtual Walkthrough in Unity](/docs/virtual_walkthrough.md): Design walkthroughs in your virtual environments and analyze participants trajectories and visual attention patterns.
+- [Spatial Analysis with Rhino and Grasshopper](/docs/spatial_analysis.md): Use human-centred performance measures to interactively design floorplans.
+- **Agent-Based Modeling**: Tutorial in development.
