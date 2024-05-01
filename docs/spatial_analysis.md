@@ -64,7 +64,7 @@ Then you can fire up Grasshopper by typing _Grasshopper_ into the _Command Line_
 
 Your screen should now look something like this:
 
-![Grasshopper Window](/figures/spatial_analysis//3.0_grasshopper_open.png)
+![Grasshopper Window](/figures/spatial_analysis/3.0_grasshopper_open.png)
 
 We can now try to load the Grasshopper file by choosing (in the new window) _Files_ > _Open Document..._ > `<your_path>/EBD-Toolkit/rhino_grasshopper_files/layout_analysis.gh`. However, you will most likely see a prompt warning you that several components have not been found. Don't worry, we are going to install them now.
 
@@ -97,7 +97,7 @@ Once you have chosen and obtained a reference image of the layout, you will mode
 >[!NOTE]
 >For your layout, create a **new** Rhino file, do not use `layout_analysis_example.3dm` for this task. To do so, open Rhino, and choose _File_ > _New_ and then choose the template _Large Objects - Meters_. The reason for this is that the `layout_analysis_example.3dm` file will be overwritten in case we need to update the toolkit.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/sNSvc23sOOI?si=BreYmRXO_fAzmgE-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[This tutorial](https://www.youtube.com/embed/sNSvc23sOOI?si=BreYmRXO_fAzmgE-) shows how to scale a reference image in Rhino.
 
 Then, you can use Rhino's _Polyline_ and _Line_ tools to draw the floorplan lines. Use simple lines (no curves) to trace the walls of the floorplan. Make sure that lines that are supposed to connect are indeed connecting (watertight).
 
@@ -106,9 +106,7 @@ Then, you can use Rhino's _Polyline_ and _Line_ tools to draw the floorplan line
 
 # 3 Design Intervention
 ## 3.1 Compute the performance of the base layout
-With your base design established, you will now use the EBD Toolkit to compute performance measures.
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/95ZyYRJHaEk?si=fv9FFzvOabWfKh44" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+With your base design established, you will now use the EBD Toolkit to compute performance measures. Please follow [this tutorial](https://www.youtube.com/embed/95ZyYRJHaEk?si=fv9FFzvOabWfKh44) to do so.
 
 Using the toolkit, it will be the goal to accommodate all of the following functions in the layout:
 - **Patient Room**: A room or place where one or multiple patients are treated
