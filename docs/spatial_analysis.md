@@ -1,11 +1,3 @@
----
-layout: exercise
-title: Exercise 2
-date:   2024-02-14 15:48:01 +0100
-categories: jekyll update
-publish: true
----
-
 # Topological Analysis of Hospital Layouts
 This tutorial is framed as a hand-on exercise that will allow you how to apply the toolkit when designing floorplans. The goal of this exercise will be to design an intervention in an existing hospital design such that it will improve at least two of the following measures:
 
