@@ -6,4 +6,6 @@ Temp
 
 # Test scene
 unity_files/Assets/Scenes/DoNotGetLost.unity
+unity_files/Assets/Scenes/DoNotGetLost.unity.meta
 unity_files/Assets/Prefabs/WestageShoppingMall.prefab 
+unity_files/Assets/Prefabs/WestageShoppingMall.prefab.meta

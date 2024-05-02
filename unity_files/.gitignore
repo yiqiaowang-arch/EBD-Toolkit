@@ -84,13 +84,19 @@ Data/VirtualWalkthrough/Final/*
 
 # Geometry
 *.fbx
+*.fbx.meta
 *.FBX
+*.FBX.meta
 *.jpg
+*.jpg.meta
 *.jpeg
-*.meta
+*.jpeg.meta
 *.png
+*.png.meta
 *.gif
+*.gif.meta
 *.JPG
+*.JPG.meta
 Assets/Geometry/
 Assets/Prefabs/Westgate Shopping Mall_Final Variant.prefab
 
