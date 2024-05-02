@@ -99,6 +99,8 @@ Data/VirtualWalkthrough/Final/*
 *.JPG.meta
 Assets/Geometry/
 Assets/Prefabs/Westgate Shopping Mall_Final Variant.prefab
+!Assets/Models/Model.fbx
+!Assets/Models/Model.fbx.meta
 
 # VS Code
 .vscode
