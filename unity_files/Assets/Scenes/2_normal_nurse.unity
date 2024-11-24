@@ -5785,7 +5785,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sampleInterval: 0.1
-  fileName: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/test_1122_2.csv
+  fileName: test_1123_normal.csv
   dataDirectory: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw
   targetProximity: 2
   target: {fileID: 667973666}

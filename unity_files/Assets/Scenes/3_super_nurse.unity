@@ -451,7 +451,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1800723566}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05cd78038aa45d38fa685f3a456dae7e, type: 3}
   m_Name: 
@@ -496,11 +496,11 @@ MonoBehaviour:
   numRayCast: 0
   particleSize: 1
   kernelSize: 1
-  useAllFilesInDirectory: 0
-  rawDataDirectory: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw
-  rawDataFileName: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/test_1122.csv
-  outProcessedDataFileName: Data\VirtualWalkthrough\Processed\test_1122_processed.csv
-  outSummarizedDataFileName: Data\VirtualWalkthrough\Final\test_1122_final.csv
+  useAllFilesInDirectory: 1
+  rawDataDirectory: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/nerino
+  rawDataFileName: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/nerino\test_1123_normal.csv
+  outProcessedDataFileName: Data\VirtualWalkthrough\Processed\all_files_in_nerino_processed.csv
+  outSummarizedDataFileName: Data\VirtualWalkthrough\Final\all_files_in_nerino_final.csv
   inProcessedDataFileName: 
   isVisualAttentionEnabled: 1
   isTrajectoryVisEnabled: 1
@@ -5885,7 +5885,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sampleInterval: 0.1
-  fileName: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/test_1122_2.csv
+  fileName: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw/test_1123_super.csv
   dataDirectory: C:/Users/wangy/Documents/GitHub/EBD-Toolkit/unity_files/Data/VirtualWalkthrough/Raw
   targetProximity: 2
   target: {fileID: 667973666}
